@@ -1,0 +1,77 @@
+NAME
+    HTML::FillInForm::Lite - Fills in HTML forms with data
+
+VERSION
+    The document describes HTML::FillInForm version 0.01
+
+SYNOPSIS
+            use HTML::FillInForm::Lite;
+            use CGI;
+
+            my $q = CGI->new();
+            my $h = HTML::FillInForm::Lite->new();
+
+            $output = $h->fill(\$html,    $q);
+            $output = $h->fill(\@html,    \%data);
+            $output = $h->fill(\*HTML,    \&get_param);
+            $output = $h->fill('t.html', [$q, \%default]);
+
+            $output = $h->fill(\$html, $q,
+                    fill_password => 0, # it is default
+                    ignore_fields => ['foo', 'bar'],
+                            # or disable_fields => [...]
+                    ignore_types  => ['textarea'],
+                    target        => $form_id,
+            );
+
+DESCRIPTION
+    This module fills in HTML forms with Perl data, which re-implements
+    "HTML::FillInForm" using regexp-based parser, not using "HTML::Parser".
+
+    The difference of the parser makes "HTML::FillInForm::Lite" 2 or more
+    times faster than "HTML::FillInForm".
+
+    Note that this module implements the new syntax of "HTML::FillInForm"
+    version 2.
+
+METHODS
+  new(options...)
+    Creates "HTML::FillInForm::Lite" processer with *options*.
+
+    fill_password => *bool_value*
+        Different from "HTML::FillInForm", the "fill()" method ignores
+        passwords by default.
+
+        Setting the option true, to enable passwords to be filled in.
+
+    ignore_fields => *array_ref_of_fields*
+    disable_fields => *array_ref_of_fields*
+        To ignore some fields from filling.
+
+    ignore_type => *array_ref_of_types*
+        To ignore some types from filling.
+
+    target => *form_id*
+        To fill in just the form identified by *form_id*.
+
+  fill(source, form_data [, options...])
+    Fills in *source* with *form_data*.
+
+    The *options* are the same as "new()".
+
+    You can use this method as both class or instance method. However, if
+    you make multiple calls to "fill()" with the same options, it is more
+    faster to call "new()" before "fill()".
+
+SEE ALSO
+    HTML::FillInForm.
+
+AUTHOR
+    Goro Fuji (藤 吾郎) <gfuji(at)cpan.org>
+
+LICENSE AND COPYRIGHT
+    Copyright (c) 2008 Goro Fuji, Some rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
