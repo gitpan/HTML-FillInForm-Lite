@@ -6,7 +6,7 @@ use Carp;
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.01';
+our $VERSION  = '0.02';
 
 my $SPACE       =  q{\s};
 my $IDENT       =  q{[a-zA-Z]+};
@@ -41,6 +41,18 @@ foreach my $component(
 	$component =~ s{([a-z]{2,})}
 		{ join '', map{ qq/[$_\U$_]/ } split //, $1 }egxms;
 	#### $component
+}
+
+# for debugging only
+
+sub _extract{
+	my $s = shift;
+	my %f = (input => [], select => [], textarea => []);
+	@{$f{input}}    = $s =~ m{($INPUT)}ogxms;
+	@{$f{select}}   = $s =~ m{($SELECT.*?$END_SELECT)}ogxms;
+	@{$f{textarea}} = $s =~ m{($TEXTAREA.*?$END_TEXTAREA)}ogxms;
+
+	return \%f;
 }
 
 sub new{
@@ -279,14 +291,12 @@ sub _fill_textarea{
 		return $content;
 	}
 
-	return $value;
+	return _escapeHTML($value);
 }
 
 # utilities
 
-
-sub _escapeHTML
-{
+sub _escapeHTML{
 	my $s = shift;
 #	return '' unless defined $s;
 
@@ -296,18 +306,22 @@ sub _escapeHTML
 	$s =~ s/"/&quot;/g;
 	return $s;
 }
-sub _unescapeHTML
-{
-	my $s = shift;
+#sub _unescapeHTML
+#{
+#	my $s = shift;
 #	return '' unless defined $s;
-
-	$s =~ s/&amp;/&/g;
-	$s =~ s/&lt;/</g;
-	$s =~ s/&gt;/>/g;
-	$s =~ s/&quot;/"/g;
-	$s =~ s{&#(\d+);}{chr $1}eg;
-	$s =~ s{&#x([0-9a-fA-F]+);}{pack 'H*', $1}eg;
-	return $s;
+#
+#	$s =~ s/&amp;/&/g;
+#	$s =~ s/&lt;/</g;
+#	$s =~ s/&gt;/>/g;
+#	$s =~ s/&quot;/"/g;
+#	$s =~ s{&#(\d+);}{chr $1}eg;
+#	$s =~ s{&#x([0-9a-fA-F]+);}{ chr hex $1}eg;
+#	return $s;
+#}
+sub _unquote{
+	$_[0] =~ m/ (["']) (.*) \1 /xms or return $_[0];
+	return $2;
 }
 
 sub _get_id{
@@ -326,10 +340,7 @@ sub _get_value{
 	my($value) = $_[0] =~ /$VALUE=($ATTR_VALUE)/oxms or return;
 	return _unquote($value);
 }
-sub _unquote{
-	$_[0] =~ m/ (["']) (.*) \1 /xms or return _unescapeHTML($_[0]);
-	return _unescapeHTML($2);
-}
+
 
 sub _to_query{
 	my($ref) = @_;
@@ -399,7 +410,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.01
+The document describes HTML::FillInForm version 0.02
 
 =head1 SYNOPSIS
 
@@ -432,14 +443,13 @@ not using C<HTML::Parser>.
 The difference of the parser makes C<HTML::FillInForm::Lite> 2 or more
 times faster than C<HTML::FillInForm>.
 
-Note that this module implements the new syntax of C<HTML::FillInForm>
-version 2.
-
 =head1 METHODS
 
 =head2 new(options...)
 
 Creates C<HTML::FillInForm::Lite> processer with I<options>.
+
+Acceptable options are:
 
 =over 4
 
@@ -470,11 +480,35 @@ To fill in just the form identified by I<form_id>.
 
 Fills in I<source> with I<form_data>.
 
-The I<options> are the same as C<new()>.
+The I<options> are the same as C<new()>'s.
 
 You can use this method as both class or instance method.
-However, if you make multiple calls to C<fill()> with the same
+
+Note that if you make multiple calls to C<fill()> with the same
 options, it is more faster to call C<new()> before C<fill()>.
+
+=head1 LIMITATIONS
+
+=head2 Compatibility with C<HTML::FillInForm>
+
+This module implements only the new syntax of C<HTML::FillInForm>
+version 2.
+
+=head2 Compatibility with legacy HTML
+
+Fundamentrally it understands HTML 4.x and XHTML 1.x, but it doesn't
+understand html-attributes that the name is omitted. 
+
+For example:
+
+	<INPUT TYPE=checkbox NAME=foo CHECKED> -- NG.
+	<INPUT TYPE=checkbox NAME=foo CHECKED=CHECKED> -- OK, but it's obsolete.
+	<input type="checkbox" name="foo" checked="checked" /> -- OK, it's valid XHTML
+
+And it always treats the values of attributes case-sensitively.
+In the example above, the value of C<type> must be lower-case.
+
+=back
 
 =head1 SEE ALSO
 

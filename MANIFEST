@@ -2,14 +2,15 @@ Changes
 Makefile.PL
 MANIFEST
 README
-t/00load.t
+t/00basic.t
 t/01input.t
 t/02select.t
 t/03textarea.t
 t/04target.t
 t/05encoding.t
+t/test.html
 misc/benchmark.pl
-misc/form1.html
-misc/form2.html
+misc/testform1.html
+misc/testform2.html
 lib/HTML/FillInForm/Lite.pm
 META.yml                                 Module meta-data (added by MakeMaker)

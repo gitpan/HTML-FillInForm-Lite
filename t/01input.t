@@ -6,7 +6,7 @@ use warnings;
 use FindBin qw($Bin);
 use Fatal qw(open close);
 
-use Test::More tests => 71;
+use Test::More tests => 72;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -53,14 +53,18 @@ like $o->fill(\$s,  $q),  $x, "fill in scalar ref";
 like $o->fill([$s], $q),  $x, "in array ref";
 like $o->fill($t, $q), $x, "in file";
 
-{
-	local *FH;
-	like $o->fill(do{ open FH, $t;  *FH     }, $q), $x, "in filehandle";
-	like $o->fill(do{ open FH, $t; \*FH     }, $q), $x, "in filehandle ref";
-	like $o->fill(do{ open FH, $t;  *FH{IO} }, $q), $x, "in IO object";
+like $o->fill(do{ open my($fh), $t or die $!;  *$fh     }, $q), $x, "in filehandle";
+like $o->fill(do{ open my($fh), $t or die $!; \*$fh     }, $q), $x, "in filehandle ref";
+like $o->fill(do{ open my($fh), $t or die $!;  *$fh{IO} }, $q), $x, "in IO object";
 
-	close FH;
-}
+use Tie::Handle;
+
+like $o->fill(do{
+	local *FH;
+	tie *FH, 'Tie::StdHandle', $t or die $!;
+	*FH;
+}, $q), $x, "in tied filehandle";
+
 like $o->fill(\$s,  \%q),        $x, "with hash";
 like $o->fill(\$s, [\%q]),       $x, "with array";
 like $o->fill(\$s, [ {}, \%q ]), $x, "with array";
@@ -190,11 +194,6 @@ like $o->fill(\ q{<input type="text" value="" name="c" />}, $q),
 	$x_c, "HTML escape";
 
 
-like $o->fill(\ q{<input type="checkbox" value='&lt;bar&gt;' name="c" />}, $q),
-	      $checked, "HTML unescape";
-like $o->fill(\ q{<input type="checkbox" value='&#39;bar&#39;' name="d" />}, $q),
-	      $checked, "HTML unescape";
-
 # Legacy HTML tests
 
 $s = q{<INPUT name="foo" />};
@@ -259,3 +258,12 @@ eval{
 };
 ok $@, "Error: cannot use scalar ref as query";
 
+eval{
+	$o->fill(\$s, bless {}, "the class that hase no param() method");
+};
+ok $@, "Error: cannot use the object as query";
+
+eval{
+	$o->fill(\$s, "foo");
+};
+ok $@, "Error: cannot use scalar as query";

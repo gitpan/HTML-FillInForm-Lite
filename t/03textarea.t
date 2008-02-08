@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -27,6 +27,9 @@ is $o->fill(\qq{<textarea name="bar">xxx</textarea>}, \%q),
 	     qq{<textarea name="bar">xxx</textarea>}, "doesn't fill textarea with unmatched name";
 is $o->fill(\qq{<textarea name="foo">xxx</textarea>}, \%q, ignore_types => ['textarea']),
 	     qq{<textarea name="foo">xxx</textarea>}, "ignore textarea";
+
+is $o->fill(\qq{<textarea name="foo">xxx</textarea>}, { foo => '<foo> & <bar>' }),
+	     qq{<textarea name="foo">&lt;foo&gt; &amp; &lt;bar&gt;</textarea>}, "html-escape";
 
 is $o->fill(\qq{<textarea name="foo">xxx</textarea>}, { foo => '' }),
 	     qq{<textarea name="foo"></textarea>}, "empty textarea";

@@ -1,5 +1,13 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+
+0.02  Fri Feb  8 08:51:28 2008
+	- [IMPORTANT] fixed to html-escape when filling in textarea
+	- fixed not to incorrect html-unescape in checking values
+	- add tokenizer tests to t/00basic.t
+	- add the LIMITATIONS section to the pod
+
+
 0.01  Sat Dec  1 20:18:47 2007
 	- original version; created by h2xs 1.23 with options
 		-AXPn HTML::FillInForm::Lite

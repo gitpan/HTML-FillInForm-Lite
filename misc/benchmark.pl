@@ -20,11 +20,16 @@ my %param = (
 	selector => 's1',
 );
 
-my $str  = do{ local $/; open my($fh), "$Bin/form1.html" or die $!; <$fh> };
+my $str  = do{ local $/; open my($fh), "$Bin/testform1.html" or die $!; <$fh> };
 
 my $o1 = HTML::FillInForm->new();
 my $o2 = HTML::FillInForm::Lite->new();
 
+if(grep{ $_ eq '--output-test' } @ARGV){
+	print $o1->fill(\$str, \%param);
+	print $o2->fill(\$str, \%param);
+	exit;
+}
 
 print "Small content ('(t)' means 'with Target'):\n";
 cmpthese timethese 0 => {
@@ -37,7 +42,7 @@ cmpthese timethese 0 => {
 
 
 
-$str = do{ local $/; open my($fh), "$Bin/form2.html" or die $!; <$fh> };
+$str = do{ local $/; open my($fh), "$Bin/testform2.html" or die $!; <$fh> };
 print "Large content (from a file):\n";
 cmpthese timethese 0 => {
 	'FIF'       => sub{ $o1->fill(\$str, \%param) },
