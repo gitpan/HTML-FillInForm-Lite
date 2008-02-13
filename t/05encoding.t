@@ -8,17 +8,24 @@ BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
 my $o = HTML::FillInForm::Lite->new();
 
-use utf8;
+my($s, $x);
+{
+	use utf8;
 
-is $o->fill(\q{<input name="ラクダ" value="xxx" />}, { 'ラクダ' => '駱駝' }),
-	    q{<input name="ラクダ" value="駱駝" />}, "Unicode name/value";
+	# "camel" in Japanese katakana and kanji
+	$s =  q{<input name="ラクダ" value="xxx" />};
+	$x = qr{value="駱駝"};
+	like $o->fill(\$s, { 'ラクダ' => '駱駝' }), $x, "Unicode name/value";
+}
 
-my $s = '';
-open my($fh), '>:utf8', \$s or die "Cannot open scalar: $!";
+sub my_param{
+	my $camel = '駱駝';
+	utf8::decode($camel); # decode to the perl native unicode form
+	return $camel;
+}
+SKIP:{
+	skip "utf8::decode not supported in 5.6.x", 1, if $] < 5.008;
 
-print {$fh} $o->fill(\q{<input name="ラクダ" value="xxx" />}, { 'ラクダ' => '駱駝' });
 
-no utf8;
-
-is $s, q{<input name="ラクダ" value="駱駝" />}, "Unicode name/value (output)";
-
+	like $o->fill(\$s, \&my_param), $x, "convert in param()";
+}

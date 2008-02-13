@@ -1,5 +1,10 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+0.03  Wed Feb 13 09:01:32 2008
+	- now the value undef of a option means "to be default"
+	- add "escape" option
+	- add JA.pod
+	- fixed typo in the pod
 
 0.02  Fri Feb  8 08:51:28 2008
 	- [IMPORTANT] fixed to html-escape when filling in textarea

@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+# Usage: benchmark.pl [--output-test] [--large-content]
+
 use strict;
 use warnings;
 
@@ -20,18 +22,27 @@ my %param = (
 	selector => 's1',
 );
 
-my $str  = do{ local $/; open my($fh), "$Bin/testform1.html" or die $!; <$fh> };
+my $file = "$Bin/testform1.html";
 
 my $o1 = HTML::FillInForm->new();
 my $o2 = HTML::FillInForm::Lite->new();
 
 if(grep{ $_ eq '--output-test' } @ARGV){
-	print $o1->fill(\$str, \%param);
-	print $o2->fill(\$str, \%param);
+	print $o1->fill($file, \%param);
+	print $o2->fill($file, \%param);
 	exit;
 }
+elsif(grep{ $_ eq '--large-content' } @ARGV){
+	print "Large content";
+	$file = "$Bin/testform2.html";
+}
+else{
+	print "Small content";
+}
 
-print "Small content ('(t)' means 'with Target'):\n";
+my $str  = do{ local $/; open my($fh), $file or die $!; <$fh> };
+
+print " ('(t)' means 'with Target'):\n";
 cmpthese timethese 0 => {
 	'FIF'      => sub{ $o1->fill(\$str, \%param) },
 	'Lite'     => sub{ $o2->fill(\$str, \%param) },
@@ -40,11 +51,3 @@ cmpthese timethese 0 => {
 	'Lite(t)'  => sub{ $o2->fill(\$str, \%param, target => 'form1') },
 };
 
-
-
-$str = do{ local $/; open my($fh), "$Bin/testform2.html" or die $!; <$fh> };
-print "Large content (from a file):\n";
-cmpthese timethese 0 => {
-	'FIF'       => sub{ $o1->fill(\$str, \%param) },
-	'Lite'      => sub{ $o2->fill(\$str, \%param) },
-};

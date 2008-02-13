@@ -6,7 +6,7 @@ use warnings;
 use FindBin qw($Bin);
 use Fatal qw(open close);
 
-use Test::More tests => 72;
+use Test::More tests => 78;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -58,12 +58,20 @@ like $o->fill(do{ open my($fh), $t or die $!; \*$fh     }, $q), $x, "in filehand
 like $o->fill(do{ open my($fh), $t or die $!;  *$fh{IO} }, $q), $x, "in IO object";
 
 use Tie::Handle;
+use Symbol qw(gensym);
 
 like $o->fill(do{
-	local *FH;
-	tie *FH, 'Tie::StdHandle', $t or die $!;
-	*FH;
-}, $q), $x, "in tied filehandle";
+	my $fh = gensym();
+	tie *$fh, 'Tie::StdHandle', $t or die "Cannot open '$t': $!";
+	*$fh;
+}, $q), $x, 'in tied filehandle (*FH)';
+
+like $o->fill(do{
+	my $fh = gensym();
+	tie *$fh, 'Tie::StdHandle', $t or die "Cannot open '$t': $!";
+	\*$fh;
+}, $q), $x, 'in tied filehandle (\*FH)';
+
 
 like $o->fill(\$s,  \%q),        $x, "with hash";
 like $o->fill(\$s, [\%q]),       $x, "with array";
@@ -194,6 +202,20 @@ like $o->fill(\ q{<input type="text" value="" name="c" />}, $q),
 	$x_c, "HTML escape";
 
 
+like $o->fill(\ q{<input type="text" value="" name="c" />}, $q, escape => undef),
+	$x_c, "escape => undef (default)";
+
+
+like $o->fill(\ q{<input type="text" value="" name="c" />}, $q, escape => 1),
+	$x_c, "escape => 1";
+
+like $o->fill(\ q{<input type="text" value="" name="c" />}, $q, escape => 0),
+	qr/value="<bar>"/, "escape => 0";
+
+like $o->fill(\ q{<input type="text" value="" name="c" />}, $q, escape => sub{ 'XXX' }),
+	qr/value="XXX"/, "escape => sub{ ... }";
+
+
 # Legacy HTML tests
 
 $s = q{<INPUT name="foo" />};
@@ -251,19 +273,26 @@ ok $@, "Error: cannot open file";
 eval{
 	$o->fill({}, \$s);
 };
-ok $@, "Error: bad arguments";
+ok $@, "Correct error: bad arguments";
 
 eval{
 	$o->fill(\$s, \$s);
 };
-ok $@, "Error: cannot use scalar ref as query";
+ok $@, "Correct error: cannot use scalar ref as query";
 
 eval{
 	$o->fill(\$s, bless {}, "the class that hase no param() method");
 };
-ok $@, "Error: cannot use the object as query";
+ok $@, "Correct error: cannot use the object as query";
 
 eval{
 	$o->fill(\$s, "foo");
 };
-ok $@, "Error: cannot use scalar as query";
+ok $@, "Correct error: use scalar as query";
+
+eval{
+	$o->fill(\$s, {}, foobar => 1);
+};
+ok $@, "Correct error: unknown option";
+
+#END

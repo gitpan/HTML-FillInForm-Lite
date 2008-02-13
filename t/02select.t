@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -33,4 +33,10 @@ is $o->fill(\ qq{<select name="foo"><option value="bar">ok</option></select>}, \
 is $o->fill(\ qq{<select name="foo"><option value="bar">ok</option><option value="baz" selected="selected">ng</option></select>}, \%q),
 	      qq{<select name="foo"><option value="bar" selected="selected">ok</option><option value="baz">ng</option></select>},
 	    	"chenge the selected";
+
+like $o->fill(\ qq{<select name="foo"><option value="bar">ok</option><option value="baz" selected="selected">ok</option></select>},
+		{ foo => [qw(bar baz)] }),
+	      qr{value="bar"\s+selected="selected".*value="baz"\s+selected="selected"},
+	    	"select multiple options";
+
 

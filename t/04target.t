@@ -32,7 +32,7 @@ is(HTML::FillInForm::Lite->new(target => "no_foo")->fill(\$s, { bar => "ok" }),
 is(HTML::FillInForm::Lite->new(target => "no_foo")->fill(\$s, { bar => "ok" }, target => "foo"),
 	$x, "target overriding");
 
-is(HTML::FillInForm::Lite->new(target => "foo")->fill(\<<'EOT', { bar => "ok"}), <<'EOT');
+is(HTML::FillInForm::Lite->new(target => "foo")->fill(\<<'EOT', { bar => "ok"}), <<'EOT', "no target exists (no-op)");
 <form method="get"><input type="bar" value="null" /></form>
 EOT
 <form method="get"><input type="bar" value="null" /></form>

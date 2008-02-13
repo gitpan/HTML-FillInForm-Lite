@@ -1,0 +1,150 @@
+=encoding UTF-8
+
+=head1 NAME
+
+HTML::FillInForm::Lite - Fills in HTML forms with data
+
+=head1 VERSION
+
+The document describes HTML::FillInForm version 0.03
+
+=head1 SYNOPSIS
+
+	use HTML::FillInForm::Lite;
+	use CGI;
+
+	my $q = CGI->new();
+	my $h = HTML::FillInForm::Lite->new();
+
+	$output = $h->fill(\$html,    $q);
+	$output = $h->fill(\@html,    \%data);
+	$output = $h->fill(\*HTML,    \&get_param);
+	$output = $h->fill('t.html', [$q, \%default]);
+
+	$output = $h->fill(\$html, $q,
+		fill_password => 0, # it is default
+		ignore_fields => ['foo', 'bar'],
+			# or disable_fields => [...]
+		target        => $form_id,
+	);
+
+
+=head1 DESCRIPTION
+
+このモジュールはHTMLのフォームにデータを充填します。
+これはC<HTML::FillInForm>を再実装したものです。
+
+
+C<HTML::FillInForm>はC<HTML::Parser>によって実装されていますが、
+このモジュールは正規表現ベースで実装されており、その結果
+C<HTML::FillInForm::Lite>はC<HTML::FillInForm>より2倍以上高速に動きます。
+
+=head1 METHODS
+
+=head2 new(options...)
+
+C<HTML::FillInForm::Lite>のインスタンスを作成します。
+
+受け付けるオプションは以下の通りです。
+
+=over 4
+
+=item fill_password => I<bool_value>
+
+C<HTML::FillInForm>と違い、規定の状態ではC<fill()>メソッドは
+パスワードフォームを無視します。
+
+このオプションを真に設定すると、パスワードも充填されるようになります。
+
+=item ignore_fields => I<array_ref_of_fields>
+
+=item disable_fields => I<array_ref_of_fields>
+
+指定したフォームフィールドを無視するようにします。
+
+=item target => I<form_id>
+
+I<form_id>をもつフォームのみを処理対象にします。
+
+=item ignore_type => I<array_ref_of_types>
+
+指定したフォームタイプを無視するようになります。
+
+このオプションはC<HTML::FillInForm>では実装されていません。
+
+=item escape => I<bool> | I<ref>
+
+オプションを指定しないか、真を指定した場合、テキストフィールドに充填される
+値はHTMLエスケープされます。
+
+偽を指定すると、値をHTMLエスケープをしません。
+
+コードリファレンスを指定すると、値のエスケープにそのコードリファレンスを使います。
+
+このオプションはC<HTML::FillInForm>では実装されていません。
+
+=back
+
+=head2 fill(source, form_data [, options...])
+
+I<souce>をI<form_data>で充填します。
+オプションはC<new()>と同じです。
+
+このメソッドはクラスメソッドとしてもインスタンスメソッドとしても
+呼び出せます。しかしC<fill()>を同じI<options>で何度も呼び出す場合は、
+C<fill()>の前にC<new()>でインスタンスを作っておくと少し高速になります。
+
+
+=head1 LIMITATIONS
+
+=head2 C<HTML::FillInForm>との互換性
+
+このモジュールはC<HTML::FillInForm>2.0の新しい構文のみ実装しています。
+
+=head2 古いHTMLとの互換性
+
+このモジュールはXHTML1.xに対応しています。
+また、HTML4.xの大部分もサポートしていますが、一部制限があります。
+まず、HTML4では許されている属性名の省略はできません。
+
+たとえば:
+
+	<INPUT TYPE=checkbox NAME=foo CHECKED> - NG.
+	<INPUT TYPE=checkbox NAME=foo CHECKED=CHECKED> - OK, ただし古い書き方
+	<input type="checkbox" name="foo" checked="checked" /> - OK, 正しいXHTML
+
+さらに、このモジュールは常に属性値の大文字・小文字を区別します。
+上記の例では、C<type>属性の値は小文字でなければなりません。
+
+=head2 コメントの扱い
+
+HTML::FillInForm::Liteはコメントやその他の無視すべきものを理解しないので、
+処理できるものは全て処理します。
+
+このことが問題になることがあります。たとえば以下のコード:
+
+	<script> document.write("<input name='foo' />") </script>
+
+これは次のような誤ったコードに置換されます:
+
+	<script> document.write("<input name='foo' value="bar" />") </script>
+
+このような問題を避けるためにC<ignore_fields>オプションが使えます。
+
+=head1 SEE ALSO
+
+L<HTML::FillInForm>.
+
+=head1 AUTHOR
+
+Goro Fuji (藤 吾郎) E<lt>gfuji(at)cpan.orgE<gt>
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2008 Goro Fuji, Some rights reserved.
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=cut
+

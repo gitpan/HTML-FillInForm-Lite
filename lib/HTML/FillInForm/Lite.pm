@@ -2,11 +2,11 @@ package HTML::FillInForm::Lite;
 
 use strict;
 use warnings;
-use Carp;
+use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.02';
+our $VERSION  = '0.03';
 
 my $SPACE       =  q{\s};
 my $IDENT       =  q{[a-zA-Z]+};
@@ -33,6 +33,7 @@ my $TYPE  = 'type';
 my $VALUE = 'value';
 
 
+# Fixes the regexp components to match capital names
 foreach my $component(
 	$FORM, $INPUT, $SELECT, $OPTION, $TEXTAREA,
 	$END_FORM, $END_SELECT, $END_OPTION, $END_TEXTAREA,
@@ -43,9 +44,7 @@ foreach my $component(
 	#### $component
 }
 
-# for debugging only
-
-sub _extract{
+sub _extract{ # for debugging only
 	my $s = shift;
 	my %f = (input => [], select => [], textarea => []);
 	@{$f{input}}    = $s =~ m{($INPUT)}ogxms;
@@ -63,9 +62,9 @@ sub new{
 }
 
 sub _parse_option{
-	my($self, %arg) = @_;
+	my $self = shift;
 
-	if(ref $self and not %arg){
+	if(ref $self and not @_){ # HTML::FillInForm::Lite->new(...)->fill(...)
 		return $self;
 	}
 
@@ -75,39 +74,58 @@ sub _parse_option{
 			submit   => 1,
 			reset    => 1,
 			password => 1,
-			ref($self) ? %{$self->{ignore_type}} : (), # merge
 		},
 		ignore_name => {
-			ref($self) ? %{$self->{ignore_name}} : (), # merge
+
 		},
-		target      => ref($self) ? $self->{target} : undef,
+		target      => undef,
+
+		escape      => \&_escapeHTML,
 	);
 
-	my $itype  = $option{ignore_type};
+	# merge
+	foreach my $key( ref($self) ? keys %{$self} : () ){
+		my $val = $self->{$key};
 
-	# ignore_types => []
-	if(my $ignore_types = $arg{ignore_types}){
-		@{$itype}{ @{$ignore_types} }
-			= (1) x @{$ignore_types};
-	}
-
-	# fill_password => bool
-	if(defined(my $fill_password = $arg{fill_password})){
-		$itype->{password} = !$fill_password;
-	}
-
-	# ignore_fields or disable_fields => []
-	foreach my $ig(qw(ignore_fields disable_fields)){
-		if(my $ignore_list = $arg{ $ig }){
-			my $iname = $option{ignore_name};
-
-			@{$iname}{ @{$ignore_list} }
-				= (1) x @{$ignore_list};
+		if(ref($val) eq 'HASH'){
+			@{ $option{$key} }{ keys %{$val} }
+				= values %{$val};
+		}
+		else{
+			$option{$key} = $val;
 		}
 	}
 
-	if(defined(my $target = $arg{target})){
-		$option{target} = $target;
+	while(my($opt, $val) = splice @_, 0, 2){
+		next unless defined $val;
+
+		if($opt eq 'ignore_types'){
+			@{ $option{ignore_type} }{ @{$val} }
+				= (1) x @{$val};
+		}
+		elsif($opt eq 'fill_password'){
+			$option{ignore_type}{password} = !$val;
+		}
+		elsif($opt eq 'ignore_fields' or $opt eq 'disable_fields'){
+			@{ $option{ignore_name} }{ @{$val} }
+				= (1) x @{$val};
+		}
+		elsif($opt eq 'target'){
+			$option{target} = $val;
+		}
+		elsif($opt eq 'escape'){
+			if($val){
+				$option{escape} = ref($val) eq 'CODE'
+					? $val
+					: \&_escapeHTML
+			}
+			else{
+				$option{escape} = \&_noop_filter;
+			}
+		}
+		else{
+			croak("Unknown option '$opt' suplied");
+		}
 	}
 
 	return \%option;
@@ -127,6 +145,8 @@ sub fill{
 
 	### $option
 
+
+	# HTML source to a scalar
 	my $content;
 	if(ref($src) eq 'SCALAR'){
 		$content = ${$src};
@@ -136,17 +156,17 @@ sub fill{
 	}
 	else{
 		if(not defined fileno $src){
-			open my($f), '<', $src
+			open my($in), '<', $src
 				or croak("Cannot open '$src': $!");
-			$src = $f;
+			$src = $in;
 		}
 		$content = do{ local $/ = undef; <$src> };
 	}
 
-	$q = _to_query($q);
+	# Form data to an object
+	$q = _to_form_object($q);
 
 	# Fill in contents
-
 	if($option->{target}){
 		$content =~ s{ ($FORM) (.*?) ($END_FORM) }
 		             {	my($form, $content, $end_form) = ($1, $2, $3);
@@ -186,7 +206,7 @@ sub _ignore{
 			|| $option->{ignore_name}{$name};
 	}
 
-	return 1; # this field ignored
+	return 1; # unnamed fields are ignored
 }
 
 sub _fill_input{
@@ -236,7 +256,7 @@ sub _fill_input{
 		}
 	}
 	else{
-		my $new_value = _escapeHTML($values[0]);
+		my $new_value = $option->{escape}->($values[0]);
 
 		$tag =~ s{$VALUE = $ATTR_VALUE}{value="$new_value"}oxms
 				or $tag =~ s{\s* /? > $}
@@ -291,11 +311,14 @@ sub _fill_textarea{
 		return $content;
 	}
 
-	return _escapeHTML($value);
+	return $option->{escape}->($value);
 }
 
 # utilities
 
+sub _noop_filter{
+	return $_[0];
+}
 sub _escapeHTML{
 	my $s = shift;
 #	return '' unless defined $s;
@@ -342,7 +365,7 @@ sub _get_value{
 }
 
 
-sub _to_query{
+sub _to_form_object{
 	my($ref) = @_;
 
 	my $type = ref $ref;
@@ -356,7 +379,7 @@ sub _to_query{
 	}
 	elsif($type eq 'ARRAY'){
 		$wrapper = [];
-		@{$wrapper} = map{ _to_query($_) } @{$ref};
+		@{$wrapper} = map{ _to_form_object($_) } @{$ref};
 	}
 	elsif($type eq 'CODE'){
 		$wrapper = \$ref;
@@ -410,7 +433,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.02
+The document describes HTML::FillInForm version 0.03
 
 =head1 SYNOPSIS
 
@@ -429,7 +452,6 @@ The document describes HTML::FillInForm version 0.02
 		fill_password => 0, # it is default
 		ignore_fields => ['foo', 'bar'],
 			# or disable_fields => [...]
-		ignore_types  => ['textarea'],
 		target        => $form_id,
 	);
 
@@ -440,7 +462,7 @@ This module fills in HTML forms with Perl data,
 which re-implements C<HTML::FillInForm> using regexp-based parser,
 not using C<HTML::Parser>.
 
-The difference of the parser makes C<HTML::FillInForm::Lite> 2 or more
+The difference in the parsers makes C<HTML::FillInForm::Lite> 2 or more
 times faster than C<HTML::FillInForm>.
 
 =head1 METHODS
@@ -449,16 +471,19 @@ times faster than C<HTML::FillInForm>.
 
 Creates C<HTML::FillInForm::Lite> processer with I<options>.
 
-Acceptable options are:
+There are several options. All the methods are disabled when C<undef> is
+suplied.
+
+Acceptable options are as follows:
 
 =over 4
 
-=item fill_password => I<bool_value>
+=item fill_password => I<bool>
 
-Different from C<HTML::FillInForm>, the C<fill()> method ignores
+Unlike C<HTML::FillInForm>, the C<fill()> method ignores
 passwords by default.
 
-Setting the option true, to enable passwords to be filled in.
+To enable passwords to be filled in, set the option true. 
 
 =item ignore_fields => I<array_ref_of_fields>
 
@@ -466,13 +491,26 @@ Setting the option true, to enable passwords to be filled in.
 
 To ignore some fields from filling.
 
+=item target => I<form_id>
+
+To fill in just the form identified by I<form_id>.
+
 =item ignore_type => I<array_ref_of_types>
 
 To ignore some types from filling.
 
-=item target => I<form_id>
+Note that it is not implemented in C<HTML::FillInForm>.
 
-To fill in just the form identified by I<form_id>.
+=item escape => I<bool> | I<ref>
+
+If true is provided (or by default), values filled in text fields will be
+html-escaped, e.g. C<< <tag> >> to be C<< &lt;tag&gt; >>.
+
+The values are already html-escaped, set the option false.
+
+If a code reference is provided, it will be used to escape the values.
+
+Note that it not implemented in C<HTML::FillInForm>.
 
 =back
 
@@ -482,10 +520,17 @@ Fills in I<source> with I<form_data>.
 
 The I<options> are the same as C<new()>'s.
 
-You can use this method as both class or instance method.
+You can use this method as both class or instance method, 
+but you make multiple calls to C<fill()> with the same
+options, it is a little faster to call C<new()> before C<fill()>.
 
-Note that if you make multiple calls to C<fill()> with the same
-options, it is more faster to call C<new()> before C<fill()>.
+To clear all the fields, provide I<form_data> with a subroutine returning an
+empty string, like:
+
+	HTML::FillInForm::Lite->fill($source, sub{ '' });
+
+This is because if returning values are undefined, it will leave the elements
+untouched.
 
 =head1 LIMITATIONS
 
@@ -496,19 +541,33 @@ version 2.
 
 =head2 Compatibility with legacy HTML
 
-Fundamentrally it understands HTML 4.x and XHTML 1.x, but it doesn't
-understand html-attributes that the name is omitted. 
+It understands XHTML 1.x, and also supports a good part of HTML 4.x, but there
+are some limitations. First, it doesn't understand html-attributes that the
+name is omitted. 
 
 For example:
 
 	<INPUT TYPE=checkbox NAME=foo CHECKED> -- NG.
-	<INPUT TYPE=checkbox NAME=foo CHECKED=CHECKED> -- OK, but it's obsolete.
-	<input type="checkbox" name="foo" checked="checked" /> -- OK, it's valid XHTML
+	<INPUT TYPE=checkbox NAME=foo CHECKED=CHECKED> - OK, but obsolete.
+	<input type="checkbox" name="foo" checked="checked" /> - OK, valid XHTML
 
-And it always treats the values of attributes case-sensitively.
+Then, it always treats the values of attributes case-sensitively.
 In the example above, the value of C<type> must be lower-case.
 
-=back
+=head2 Comment handling
+
+This module processes all the processible, not knowing comments
+nor something that shouldn't be processed.
+
+It may cause problems. Suppose there is a code like:
+
+	<script> document.write("<input name='foo' />") </script>
+
+HTML::FillInForm will process the code to be broken:
+
+	<script> document.write("<input name='foo' value="bar" />") </script>
+
+To avoid such problems, you can use the C<ignore_fields> option.
 
 =head1 SEE ALSO
 
