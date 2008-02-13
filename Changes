@@ -1,5 +1,9 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+0.032 Wed Feb 13 18:26:35 2008
+	- no code changed
+	- fixed encoding in JA.pod from Shift_JIS to UTF-8
+
 0.031 Wed Feb 13 12:05:12 2008
 	- fixed NAME section in JA.pod to be indexed correctly
 
