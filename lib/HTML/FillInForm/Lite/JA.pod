@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-HTML::FillInForm::Lite - Fills in HTML forms with data
+HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.03
+The document describes HTML::FillInForm version 0.031
 
 =head1 SYNOPSIS
 

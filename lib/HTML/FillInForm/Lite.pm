@@ -6,7 +6,7 @@ use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.03';
+our $VERSION  = '0.031';
 
 my $SPACE       =  q{\s};
 my $IDENT       =  q{[a-zA-Z]+};
@@ -433,7 +433,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.03
+The document describes HTML::FillInForm version 0.031
 
 =head1 SYNOPSIS
 

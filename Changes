@@ -1,5 +1,8 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+0.031 Wed Feb 13 12:05:12 2008
+	- fixed NAME section in JA.pod to be indexed correctly
+
 0.03  Wed Feb 13 09:01:32 2008
 	- now the value undef of a option means "to be default"
 	- add "escape" option
