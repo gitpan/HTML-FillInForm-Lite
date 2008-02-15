@@ -6,7 +6,7 @@ use warnings;
 use FindBin qw($Bin);
 use Fatal qw(open close);
 
-use Test::More tests => 78;
+use Test::More tests => 88;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -60,12 +60,15 @@ like $o->fill(do{ open my($fh), $t or die $!;  *$fh{IO} }, $q), $x, "in IO objec
 use Tie::Handle;
 use Symbol qw(gensym);
 
-like $o->fill(do{
-	my $fh = gensym();
-	tie *$fh, 'Tie::StdHandle', $t or die "Cannot open '$t': $!";
-	*$fh;
-}, $q), $x, 'in tied filehandle (*FH)';
+SKIP:{
+	skip "on 5.6.x", 1 if($] < 5.008);
 
+	like $o->fill(do{
+		my $fh = gensym();
+		tie *$fh, 'Tie::StdHandle', $t or die "Cannot open '$t': $!";
+		*$fh;
+	}, $q), $x, 'in tied filehandle (*FH)';
+}
 like $o->fill(do{
 	my $fh = gensym();
 	tie *$fh, 'Tie::StdHandle', $t or die "Cannot open '$t': $!";
@@ -82,6 +85,8 @@ like(HTML::FillInForm::Lite->fill(\$s, \%q), $x, "fill() as class methods");
 
 like $o->fill(\$s, { foo => undef }),
 	     $unchanged, "nothing with undef data";
+like $o->fill(\$s, { }),
+	     $unchanged, "with empty data";
 
 like $o->fill(\$s, { foo => ''}), $empty, "clear data";
 
@@ -164,6 +169,19 @@ like $o->fill(\ q{<input name="a" value="A" type="checkbox" />}, $q),
 like $o->fill(\ q{<input name="a" type="checkbox" value="B" checked="checked" />}, $q),
 	$checked, "on (multiple values)";
 
+
+my $xx = $o->fill(\ <<'EOT', $q);
+<input name="a" value="A" type="checkbox" />
+<input name="a" value="B" type="checkbox" />
+<input name="a" value="C" type="checkbox" />
+<input name="a" value="D" type="checkbox" />
+EOT
+
+like   $xx, qr/value="A" [^>]* $checked/oxms, "multi-checks(A)";
+like   $xx, qr/value="B" [^>]* $checked/oxms, "multi-checks(B)";
+like   $xx, qr/value="C" [^>]* $checked/oxms, "multi-checks(C)";
+unlike $xx, qr/value="D" [^>]* $checked/oxms, "multi-checks(D)";
+
 unlike $o->fill(\ q{<input type="checkbox" name="a" value="Z" checked="checked" />}, $q),
 	$checked, "off (multiple values)";
 
@@ -240,6 +258,22 @@ like $o->fill(\$s, $q), $x, "Invalid HTML (closed input tag and unquoted attr)";
 $s = q{<INPUT NAME=foo>};
 like $o->fill(\$s, $q), $x, "Legacy HTML (capital tag and unclosed, unquoted, capital attr)";
 
+# Strange HTML
+
+$s = q{<input name="foo" value="
+there are new lines
+">};
+like $o->fill(\$s, $q), $x, "new lines in value";
+
+$s = q{<input name="foo" value="\0 ascii nul \0">};
+like $o->fill(\$s, $q), $x, "NUL in value";
+
+$s = q{<input
+		name="foo"
+		value="null"
+>};
+like $o->fill(\$s, $q), $x, "new lines between attributes";
+
 
 # Invalid tags
 
@@ -248,6 +282,13 @@ is $o->fill(\$y, $q), $y, "no inputable";
 
 $y = q{<input name="foo"value="" />};
 is $o->fill(\$y, $q), $y, "no space between attributes";
+
+$y = q{<input name="foo"value="" />};
+is $o->fill(\$y, $q), $y, "no space between attributes";
+
+$y = q{<input Hello name="foo" value="" />};
+is $o->fill(\$y, $q), $y, "rubbish in tag";
+
 
 # no HTML
 

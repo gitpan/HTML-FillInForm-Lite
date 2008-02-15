@@ -2,7 +2,8 @@
 
 use strict;
 use warnings;
-use Test::More tests => 11;
+use Test::More tests => 13;
+use FindBin qw($Bin);
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -16,6 +17,12 @@ my $x = <<'HTML';
 	<input name="bar" value="ok"/>
 	</form>
 HTML
+
+like(  HTML::FillInForm::Lite->fill("$Bin/test.html", {foo => "bar"}, target => "form1"),
+	qr/value="bar"/, "fill in file with target");
+unlike(HTML::FillInForm::Lite->fill("$Bin/test.html", {foo => "bar"}, target => "form2"),
+	qr/value="bar"/, "!fill in file with target");
+
 
 is(HTML::FillInForm::Lite->fill(\$s, { bar => "ok" }, target => "foo"),
 	$x, "class method fill() with target");

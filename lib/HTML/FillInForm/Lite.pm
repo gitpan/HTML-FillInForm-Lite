@@ -6,7 +6,7 @@ use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.032';
+our $VERSION  = '0.04';
 
 my $SPACE       =  q{\s};
 my $IDENT       =  q{[a-zA-Z]+};
@@ -135,10 +135,10 @@ sub fill{
 	my($self, $src, $q, @opt) = @_;
 
 	if (not defined $src){
-		croak("No source suplied");
+		croak('No source suplied');
 	}
 	if (not defined $q){
-		croak("No data suplied");
+		croak('No data suplied');
 	}
 
 	my $option = $self->_parse_option(@opt);
@@ -186,7 +186,6 @@ sub fill{
 
 sub _fill{
 	my($option, $q, $content) = @_;
-
 	$content =~ s{($INPUT)}{ _fill_input($option, $q, $1)        }goexms;
 
 	$content =~ s{($SELECT) (.*?) ($END_SELECT) }
@@ -305,13 +304,13 @@ sub _fill_textarea{
 
 	my $name = _get_name($tag);
 
-	my $value;
+	my @values;
 	if(_ignore($option, 'textarea', $name)
-		or not defined($value = $q->param($name))) {
+		or not (@values = $q->param($name))) {
 		return $content;
 	}
 
-	return $option->{escape}->($value);
+	return $option->{escape}->($values[0]);
 }
 
 # utilities
@@ -342,26 +341,26 @@ sub _escapeHTML{
 #	$s =~ s{&#x([0-9a-fA-F]+);}{ chr hex $1}eg;
 #	return $s;
 #}
+
 sub _unquote{
-	$_[0] =~ m/ (["']) (.*) \1 /xms or return $_[0];
+	$_[0] =~ /(['"]) (.*) \1/xms or return $_[0];
 	return $2;
 }
-
 sub _get_id{
-	my($value) = $_[0] =~ /$ID=($ATTR_VALUE)/oxms or return;
-	return _unquote($value);
+	$_[0] =~ /$ID    = ($ATTR_VALUE)/oxms or return;
+	return _unquote($1);
 }
 sub _get_type{
-	my($value) = $_[0] =~ /$TYPE=($ATTR_VALUE)/oxms or return;
-	return _unquote($value);
+	$_[0] =~ /$TYPE  = ($ATTR_VALUE)/oxms or return;
+	return _unquote($1);
 }
 sub _get_name{
-	my($value) = $_[0] =~ /$NAME=($ATTR_VALUE)/oxms or return;
-	return _unquote($value);
+	$_[0] =~ /$NAME  = ($ATTR_VALUE)/oxms or return;
+	return _unquote($1);
 }
 sub _get_value{
-	my($value) = $_[0] =~ /$VALUE=($ATTR_VALUE)/oxms or return;
-	return _unquote($value);
+	$_[0] =~ /$VALUE = ($ATTR_VALUE)/oxms or return;
+	return _unquote($1);
 }
 
 
@@ -374,8 +373,9 @@ sub _to_form_object{
 	if($type eq 'HASH'){
 		$wrapper = {};
 		@{$wrapper}{ keys %{$ref} }
-			= map{ [grep{ defined } ref($_) eq 'ARRAY' ? @{$_} : $_] }
-				values %{$ref};
+			= map{
+				[ grep{ defined } ref($_) eq 'ARRAY' ? @{$_} : $_ ]
+			     } values %{$ref};
 	}
 	elsif($type eq 'ARRAY'){
 		$wrapper = [];
@@ -398,21 +398,13 @@ sub HTML::FillInForm::Lite::HASH::param{
 
 	my $value = $hash_ref->{$key} or return;
 
-	return wantarray ? @{ $value } : $value->[0];
+	return @{ $value };
 }
 
 sub HTML::FillInForm::Lite::ARRAY::param{
 	my($ary_ref, $key) = @_;
 
-	if(wantarray){
-		return map{ $_->param($key) } @{$ary_ref};
-	}
-	else{
-		return(
-			(grep{ defined $_ }
-				map{ scalar $_->param($key) } @{$ary_ref})[0]
-		);
-	}
+	return map{ $_->param($key) } @{$ary_ref};
 }
 
 sub HTML::FillInForm::Lite::CODE::param{
@@ -433,7 +425,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.032
+The document describes HTML::FillInForm version 0.04
 
 =head1 SYNOPSIS
 

@@ -6,7 +6,7 @@ HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.032
+The document describes HTML::FillInForm version 0.04
 
 =head1 SYNOPSIS
 
@@ -46,6 +46,7 @@ C<HTML::FillInForm::Lite>はC<HTML::FillInForm>より2倍以上高速に動き�
 C<HTML::FillInForm::Lite>のインスタンスを作成します。
 
 受け付けるオプションは以下の通りです。
+オプションに未定義値を渡すと、そのオプションそのものを無視します。
 
 =over 4
 
@@ -77,7 +78,7 @@ I<form_id>をもつフォームのみを処理対象にします。
 オプションを指定しないか、真を指定した場合、テキストフィールドに充填される
 値はHTMLエスケープされます。
 
-偽を指定すると、値をHTMLエスケープをしません。
+偽を指定すると、値はHTMLエスケープされません。
 
 コードリファレンスを指定すると、値のエスケープにそのコードリファレンスを使います。
 

@@ -1,5 +1,10 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+0.04 Thu Feb 14 22:51:10  2008
+	- param() called always in list context
+	- fixed some tests to be success on 5.6.x
+	- add a few tests
+
 0.032 Wed Feb 13 18:26:35 2008
 	- no code changed
 	- fixed encoding in JA.pod from Shift_JIS to UTF-8
