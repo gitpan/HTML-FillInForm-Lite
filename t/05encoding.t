@@ -2,20 +2,37 @@
 
 use strict;
 use warnings;
-use Test::More tests => 3;
+use Test::More;
+
+BEGIN{
+	if($] < 5.008){
+		my $v = $] > 5.006 ? sprintf('%vd', $^V) : $];
+		plan skip_all => "for 5.8-style unicode semantics";
+	}
+	else{
+		plan tests => 6;
+	}
+}
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
 my $o = HTML::FillInForm::Lite->new();
 
-my($s, $x);
+my($s1, $s2, $x);
 {
 	use utf8;
-
-	# "camel" in Japanese katakana and kanji
-	$s =  q{<input name="ラクダ" value="xxx" />};
+	# "camel" in Japanese
 	$x = qr{value="駱駝"};
-	like $o->fill(\$s, { 'ラクダ' => '駱駝' }), $x, "Unicode name/value";
+
+	$s1 = q{<input name="camel" value="xxx" />};
+	like $o->fill(\$s1,
+		{ camel => '駱駝' }), $x, "Unicode value";
+
+	like $o->fill(\q{<input name="ラクダ" value="xxx" />},
+		{ 'ラクダ' => 'camel' }), qr/value="camel"/, "Unicode name";
+
+	$s2 =  q{<input name="ラクダ" value="xxx" />};
+	like $o->fill(\$s2, { 'ラクダ' => '駱駝' }), $x, "Unicode name/value";
 }
 
 sub my_param{
@@ -23,9 +40,7 @@ sub my_param{
 	utf8::decode($camel); # decode to the perl native unicode form
 	return $camel;
 }
-SKIP:{
-	skip "utf8::decode not supported in 5.6.x", 1, if $] < 5.008;
 
+like $o->fill(\$s1, \&my_param), $x, "unicodize in param()";
+like $o->fill(\$s2, \&my_param), $x, "unicodize in param()";
 
-	like $o->fill(\$s, \&my_param), $x, "convert in param()";
-}

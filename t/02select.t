@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -15,9 +15,19 @@ my %q = (
 
 my $o = HTML::FillInForm::Lite->new();
 
-is $o->fill(\ qq{<select name="foo"><option>bar</option></select>}, \%q),
-	      qq{<select name="foo"><option selected="selected">bar</option></select>},
-	  	  "select an option";
+like $o->fill(\ qq{<select name="foo"><option>bar</option></select>}, \%q),
+	      qr{<option selected="selected">\s*bar\s*</option>},
+	  	  "select an option (no white-space)";
+
+like $o->fill(\ qq{<select name="foo">
+			<option>
+				bar
+			</option>
+		</select>}, \%q),
+	      qr{<option selected="selected">\s*bar\s*</option>},
+	  	  "select an option (including many white spaces)";
+
+
 is $o->fill(\ qq{<select name="foo"><option>bar</option></select>}, \%q, ignore_types => ['select']),
 	      qq{<select name="foo"><option>bar</option></select>},
 	  	  "ignore select";

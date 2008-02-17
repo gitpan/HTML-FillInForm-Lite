@@ -6,12 +6,14 @@ use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.04';
+our $VERSION  = '0.05';
 
 my $SPACE       =  q{\s};
 my $IDENT       =  q{[a-zA-Z]+};
 my $ATTR_VALUE  =  q{(?: " [^"]* " | ' [^']* ' | [^'">/\s]+ )};
 my $ATTR        = qq{(?:$SPACE+ $IDENT = $ATTR_VALUE )};
+
+#$ATTR = q{[^>]}; # a little faster, but recognizes invalid XHTML
 
 my $FORM     = qq{(?: <form     $ATTR+ $SPACE*>  )};
 my $INPUT    = qq{(?: <input    $ATTR+ $SPACE*/?>)};
@@ -27,6 +29,8 @@ my $END_TEXTAREA = q{(?: </textarea> )};
 my $CHECKED  = q{(?: checked  = (?: "checked " | 'checked'  | checked  ) )};
 my $SELECTED = q{(?: selected = (?: "selected" | 'selected' | selected ) )};
 
+#my $DISABLED = q{(?: disabled = (?: "disabled" | 'disabled' | disabled ) )};
+
 my $ID    = 'id';
 my $NAME  = 'name';
 my $TYPE  = 'type';
@@ -37,7 +41,9 @@ my $VALUE = 'value';
 foreach my $component(
 	$FORM, $INPUT, $SELECT, $OPTION, $TEXTAREA,
 	$END_FORM, $END_SELECT, $END_OPTION, $END_TEXTAREA,
-	$CHECKED, $SELECTED, $ID, $NAME, $TYPE, $VALUE){
+	$CHECKED, $SELECTED,
+#	$DISABLED,
+	$ID, $NAME, $TYPE, $VALUE){
 
 	$component =~ s{([a-z]{2,})}
 		{ join '', map{ qq/[$_\U$_]/ } split //, $1 }egxms;
@@ -75,9 +81,6 @@ sub _parse_option{
 			reset    => 1,
 			password => 1,
 		},
-		ignore_name => {
-
-		},
 		target      => undef,
 
 		escape      => \&_escapeHTML,
@@ -99,16 +102,17 @@ sub _parse_option{
 	while(my($opt, $val) = splice @_, 0, 2){
 		next unless defined $val;
 
-		if($opt eq 'ignore_types'){
-			@{ $option{ignore_type} }{ @{$val} }
+		if(	   $opt eq 'ignore_types'
+			or $opt eq 'ignore_fields'
+			or $opt eq 'disable_fields'
+		){
+
+			chop $opt; # plural to singular
+			@{ $option{$opt} ||= {} }{ @{$val} }
 				= (1) x @{$val};
 		}
 		elsif($opt eq 'fill_password'){
 			$option{ignore_type}{password} = !$val;
-		}
-		elsif($opt eq 'ignore_fields' or $opt eq 'disable_fields'){
-			@{ $option{ignore_name} }{ @{$val} }
-				= (1) x @{$val};
 		}
 		elsif($opt eq 'target'){
 			$option{target} = $val;
@@ -202,7 +206,7 @@ sub _ignore{
 
 	if(defined $name and length $name){
 		return     $option->{ignore_type}{$type}
-			|| $option->{ignore_name}{$name};
+			|| $option->{ignore_field}{$name};
 	}
 
 	return 1; # unnamed fields are ignored
@@ -222,27 +226,13 @@ sub _fill_input{
 		return $tag;
 	}
 
-	if($type eq 'radio'){
+#	_disable($option, $name, $tag);
+
+	if($type eq 'checkbox' or $type eq 'radio'){
 		my $value = _get_value($tag);
 
 		if(not defined $value){
-			return $tag;
-		}
-
-		if(grep{ $_ eq $value } @values){
-			$tag =~ /$SELECTED/oxms
-				or $tag =~ s{\s* /? > $}
-					    { selected="selected" />}xms;
-		}
-		else{
-			$tag =~ s/\s*$SELECTED//goxms;
-		}
-	}
-	elsif($type eq 'checkbox'){
-		my $value = _get_value($tag);
-
-		if(not defined $value){
-			return $tag;
+			$value = 'on';
 		}
 
 		if(grep{ $_ eq $value } @values){
@@ -274,21 +264,24 @@ sub _fill_select{
 		return $content;
 	}
 
-	my %value;
-	@value{@values} = ();
+#	_disable($option, $name, $tag);
 
 	$content =~ s{($OPTION) (.*?) ($END_OPTION)}
-		     { _fill_option($q, \%value, $1, $2) . $2 . $3 }xgoes;
+		     { _fill_option($q, \@values, $1, $2) . $2 . $3 }goexsm;
 	return $content;
 }
 sub _fill_option{
-	my($q, $value_ref, $tag, $content) = @_;
+	my($q, $values_ref, $tag, $content) = @_;
 
 	my $value = _get_value($tag);
-	$value = $content if not defined $value;
+	unless( defined $value ){
+		$value = $content;
+		$value =~ s{\A $SPACE+   }{}oxms;
+		$value =~ s{   $SPACE+ \z}{}oxms;
+	}
 
 	### @_
-	if(exists $value_ref->{$value}){
+	if(grep{ $value eq $_ } @{$values_ref}){
 		$tag =~ /$SELECTED/oxms
 			or $tag =~ s{ \s* > $}
 				    { selected="selected">}xms;
@@ -309,6 +302,8 @@ sub _fill_textarea{
 		or not (@values = $q->param($name))) {
 		return $content;
 	}
+
+#	_disable($option, $name, $tag);
 
 	return $option->{escape}->($values[0]);
 }
@@ -363,6 +358,17 @@ sub _get_value{
 	return _unquote($1);
 }
 
+#sub _disable{
+#	my $option = shift;
+#	my $name   = shift;
+#
+#	if($option->{disable_field}{$name}){
+#		$_[0] =~ /$DISABLED/oxms
+#			or $_[0] =~ s{\s* /? > $}
+#				    { disabled="disabled" />}xms;
+#	}
+#	return;
+#}
 
 sub _to_form_object{
 	my($ref) = @_;
@@ -374,7 +380,9 @@ sub _to_form_object{
 		$wrapper = {};
 		@{$wrapper}{ keys %{$ref} }
 			= map{
-				[ grep{ defined } ref($_) eq 'ARRAY' ? @{$_} : $_ ]
+				ref($_) eq 'ARRAY' ?  $_  :
+				defined($_)        ? [$_] :
+						     ();
 			     } values %{$ref};
 	}
 	elsif($type eq 'ARRAY'){
@@ -425,7 +433,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.04
+The document describes HTML::FillInForm version 0.05
 
 =head1 SYNOPSIS
 
@@ -443,7 +451,6 @@ The document describes HTML::FillInForm version 0.04
 	$output = $h->fill(\$html, $q,
 		fill_password => 0, # it is default
 		ignore_fields => ['foo', 'bar'],
-			# or disable_fields => [...]
 		target        => $form_id,
 	);
 
@@ -472,14 +479,12 @@ Acceptable options are as follows:
 
 =item fill_password => I<bool>
 
-Unlike C<HTML::FillInForm>, the C<fill()> method ignores
-passwords by default.
+To enable passwords to be filled in, set the option true.
 
-To enable passwords to be filled in, set the option true. 
+Note that the effect of the option is the same as that of C<HTML::FillInForm>'s,
+but by default, C<HTML::FillInForm::Lite> ignores password fields.
 
 =item ignore_fields => I<array_ref_of_fields>
-
-=item disable_fields => I<array_ref_of_fields>
 
 To ignore some fields from filling.
 
@@ -533,9 +538,11 @@ version 2.
 
 =head2 Compatibility with legacy HTML
 
-It understands XHTML 1.x, and also supports a good part of HTML 4.x, but there
-are some limitations. First, it doesn't understand html-attributes that the
-name is omitted. 
+This module is designed to process XHTML 1.x.
+
+And it also supporting a good part of HTML 4.x , but there are some
+limitations. First, it doesn't understand html-attributes that the name is
+omitted. 
 
 For example:
 
@@ -545,6 +552,15 @@ For example:
 
 Then, it always treats the values of attributes case-sensitively.
 In the example above, the value of C<type> must be lower-case.
+
+Moreover, it doesn't recognize ommited closing tags, like:
+
+	<select name="foo">
+		<option>bar
+		<option>baz
+	</select>
+
+When you can't get what you want, try to give your source to a HTML validator.
 
 =head2 Comment handling
 
@@ -564,6 +580,8 @@ To avoid such problems, you can use the C<ignore_fields> option.
 =head1 SEE ALSO
 
 L<HTML::FillInForm>.
+
+L<HTML::FillInForm::Lite::JA> - document in Japanese.
 
 =head1 AUTHOR
 

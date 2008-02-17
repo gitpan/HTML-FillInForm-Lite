@@ -12,6 +12,7 @@ t/test.html
 misc/benchmark.pl
 misc/testform1.html
 misc/testform2.html
+misc/lib/HTML/FillInForm/Lite/Compat.pm
 lib/HTML/FillInForm/Lite.pm
 lib/HTML/FillInForm/Lite/JA.pod
 META.yml                                 Module meta-data (added by MakeMaker)

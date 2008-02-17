@@ -6,7 +6,7 @@ use warnings;
 use FindBin qw($Bin);
 use Fatal qw(open close);
 
-use Test::More tests => 88;
+use Test::More tests => 86;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -34,7 +34,6 @@ my $unchanged = qr{value="null"};
 my $empty     = qr{value=""};
 
 my $checked  = qr{checked="checked"};
-my $selected = qr{selected="selected"};
 
 sub my_param{
 	my($key) = @_;
@@ -120,8 +119,6 @@ like $o->fill(\$y, $q),                     $unchanged, "options effects only th
 
 like $o->fill(\$s, $q, ignore_types   => ['text']), $unchanged, "ignore_types";
 like $o->fill(\$s, $q, ignore_fields  => ['foo']),  $unchanged, "ignore_fields";
-like $o->fill(\$s, $q, disable_fields => ['foo']),  $unchanged, "disable_fields";
-
 
 # new/fill with options
 
@@ -195,23 +192,23 @@ unlike $o->fill(\ q{<input type="checkbox" name="a" />}, $q),
 # radio
 
 like $o->fill(\ q{<input type="radio" name="s" value="A" />}, $q),
-	$selected, "select radio button";
-unlike $o->fill(\ q{<input type="radio" name="s" value="B" selected="selected" />}, $q),
-	$selected, "unselect radio button";
-like $o->fill(\ q{<input type="radio" name="s" value="A" selected="selected" />}, $q),
-	$selected, "remains selected";
+	$checked, "select radio button";
+unlike $o->fill(\ q{<input type="radio" name="s" value="B" checked="checked" />}, $q),
+	$checked, "unselect radio button";
+like $o->fill(\ q{<input type="radio" name="s" value="A" checked="checked" />}, $q),
+	$checked, "remains checked";
 unlike $o->fill(\ q{<input type="radio" name="s" value="B" />}, $q),
-	$selected, "remains unselected";
+	$checked, "remains unchecked";
 
-unlike $o->fill(\ q{<input type="radio" name="s" value="Z" selected='selected'/>}, $q),
-	qr/selected/, "unselected";
-unlike $o->fill(\ q{<input type="radio" name="s" value="Z" selected=selected/>}, $q),
-	qr/selected/, "unselected";
+unlike $o->fill(\ q{<input type="radio" name="s" value="Z" checked='checked'/>}, $q),
+	qr/checked/, "unchecked";
+unlike $o->fill(\ q{<input type="radio" name="s" value="Z" checked=checked/>}, $q),
+	qr/checked/, "unchecked";
 
 unlike $o->fill(\ q{<input type="radio" value="A" />}, $q),
-	$selected, "ignore undefined name";
+	$checked, "ignore undefined name";
 unlike $o->fill(\ q{<input type="radio" name="s" />}, $q),
-	$selected, "ignore undefined value";
+	$checked, "ignore undefined value";
 
 
 like $o->fill(\ q{<input type="text" value="" name="b" />}, $q),
@@ -279,9 +276,6 @@ like $o->fill(\$s, $q), $x, "new lines between attributes";
 
 $y = q{<a name="foo" value="" />};
 is $o->fill(\$y, $q), $y, "no inputable";
-
-$y = q{<input name="foo"value="" />};
-is $o->fill(\$y, $q), $y, "no space between attributes";
 
 $y = q{<input name="foo"value="" />};
 is $o->fill(\$y, $q), $y, "no space between attributes";

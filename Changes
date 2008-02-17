@@ -1,5 +1,13 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+0.05 Sun Feb 17 09:51:17  2008
+	- [IMPORTANT] fixed a bug of 'radio' fields
+		(now using 'checked' to check it, not 'selected')
+	- skip encoding test in 5.6.x
+	- changed 'disable_fields' to be ignored
+		because it is meaningless in HTML::FillInForm
+		(at least as of version 2.0)
+
 0.04 Thu Feb 14 22:51:10  2008
 	- param() called always in list context
 	- fixed some tests to be success on 5.6.x
@@ -13,7 +21,7 @@ Revision history for Perl extension HTML::FillInForm::Lite.
 	- fixed NAME section in JA.pod to be indexed correctly
 
 0.03  Wed Feb 13 09:01:32 2008
-	- now the value undef of a option means "to be default"
+	- now the value undef of an option means "to be default"
 	- add "escape" option
 	- add JA.pod
 	- fixed typo in the pod

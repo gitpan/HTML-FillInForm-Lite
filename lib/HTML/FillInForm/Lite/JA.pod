@@ -6,7 +6,7 @@ HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.04
+The document describes HTML::FillInForm version 0.05
 
 =head1 SYNOPSIS
 
@@ -24,7 +24,6 @@ The document describes HTML::FillInForm version 0.04
 	$output = $h->fill(\$html, $q,
 		fill_password => 0, # it is default
 		ignore_fields => ['foo', 'bar'],
-			# or disable_fields => [...]
 		target        => $form_id,
 	);
 
@@ -37,7 +36,8 @@ The document describes HTML::FillInForm version 0.04
 
 C<HTML::FillInForm>はC<HTML::Parser>によって実装されていますが、
 このモジュールは正規表現ベースで実装されており、その結果
-C<HTML::FillInForm::Lite>はC<HTML::FillInForm>より2倍以上高速に動きます。
+C<HTML::FillInForm::Lite>はC<HTML::FillInForm>よりかなり高速で、
+最大で2倍ほど速く動きます。
 
 =head1 METHODS
 
@@ -52,14 +52,13 @@ C<HTML::FillInForm::Lite>のインスタンスを作成します。
 
 =item fill_password => I<bool_value>
 
-C<HTML::FillInForm>と違い、規定の状態ではC<fill()>メソッドは
-パスワードフォームを無視します。
-
 このオプションを真に設定すると、パスワードも充填されるようになります。
 
-=item ignore_fields => I<array_ref_of_fields>
+このパスワードの効果はC<HTML::FillInForm>と同じですが、
+このオプションを指定しなければ、C<HTML::FillInForm::Lite>は
+パスワードフィールドを無視します。
 
-=item disable_fields => I<array_ref_of_fields>
+=item ignore_fields => I<array_ref_of_fields>
 
 指定したフォームフィールドを無視するようにします。
 
@@ -75,10 +74,10 @@ I<form_id>をもつフォームのみを処理対象にします。
 
 =item escape => I<bool> | I<ref>
 
-オプションを指定しないか、真を指定した場合、テキストフィールドに充填される
+オプションを指定しないか、C<1>(真)を指定した場合、テキストフィールドに充填される
 値はHTMLエスケープされます。
 
-偽を指定すると、値はHTMLエスケープされません。
+すでに値がHTMLエスケープされている場合は、C<0>を指定してください。
 
 コードリファレンスを指定すると、値のエスケープにそのコードリファレンスを使います。
 
@@ -92,9 +91,12 @@ I<souce>をI<form_data>で充填します。
 オプションはC<new()>と同じです。
 
 このメソッドはクラスメソッドとしてもインスタンスメソッドとしても
-呼び出せます。しかしC<fill()>を同じI<options>で何度も呼び出す場合は、
-C<fill()>の前にC<new()>でインスタンスを作っておくと少し高速になります。
+呼び出せます。
 
+C<fill()>を同じI<options>で何度も呼び出す場合は、
+C<fill()>の前にあらかじめC<new()>でインスタンスを作っておくと少し高速になります。
+しかし、同じインスタンスにつき一度しか呼び出さないなら、インスタンスを作ることに
+意味はありません。
 
 =head1 LIMITATIONS
 
@@ -117,6 +119,15 @@ C<fill()>の前にC<new()>でインスタンスを作っておくと少し高速
 さらに、このモジュールは常に属性値の大文字・小文字を区別します。
 上記の例では、C<type>属性の値は小文字でなければなりません。
 
+さらに、閉じタグは省略できません。たとえば以下のようなコードは無視します。
+
+	<select name="foo">
+		<option>bar
+		<option>baz
+	</select>
+
+正しいXHTMLで書けばこれらの問題は起こりません。
+
 =head2 コメントの扱い
 
 HTML::FillInForm::Liteはコメントやその他の無視すべきものを理解しないので、
@@ -135,6 +146,8 @@ HTML::FillInForm::Liteはコメントやその他の無視すべきものを理�
 =head1 SEE ALSO
 
 L<HTML::FillInForm>.
+
+L<HTML::FillInForm::Lite>.
 
 =head1 AUTHOR
 
