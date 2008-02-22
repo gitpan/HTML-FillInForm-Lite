@@ -1,34 +1,63 @@
 #!/usr/bin/perl
+# Usage: benchmark.pl --help
 
 use strict;
 use warnings;
 
 use FindBin qw($Bin);
 
-use HTML::FillInForm 2.0;
-use HTML::FillInForm::Lite;
-
 use Benchmark qw(timethese cmpthese);
+
+
+printf "[Perl v%vd]\n", $^V;
+
 
 if(grep{ $_ eq '--help' } @ARGV){
 	print <<'EOT';
-benchmark.pl (--smal|--large) [options..]
-	--large         processe large content
-	--reuse-object  reuse the objects
-	--target        with 'target' option
-	--scalar        fill in scalar
+benchmark.pl [options..]
+
+	--file          fills in a file [DEFAULT]
+	--scalar	fills in a scalar
+
+	--small         fills in only a small form [DEFAULT]
+	--large         fills in a full HTML file
+
+	--target        fills with the --target option
+
+	--class         calls fill() as a class method
+	--instance      calls fill() as a instance method
 EOT
 	exit;
 }
 
-my %param = (
-	one   => 'ONE',
-	two   => 'TWO',
-	three => 'THREE',
-	four  => 'C',
+{
+	my $start = Benchmark->new;
+	require HTML::FillInForm;
+	printf "load HTML::FillInForm (v%s):\n   %s.\n",
+		HTML::FillInForm->VERSION,
+		Benchmark->new->timediff($start)->timestr;
 
-	checker  => 'c1',
-	selector => 's1',
+	$start = Benchmark->new;
+	require HTML::FillInForm::Lite;
+	printf "load HTML::FillInForm::Lite (v%s):\n   %s\n",
+		HTML::FillInForm::Lite->VERSION,
+		Benchmark->new->timediff($start)->timestr;
+}
+print "\n";
+
+my %param = (
+	one   => '<ONE>',
+	two   => '<TWO>',
+	three => '<THREE>',
+	four  => '<FOUR>',
+	five  => '<FIVE>',
+	six   => '<SIX>',
+	seven => '<SEVEN>',
+	eight => '<EIGHT>',
+
+	c => ['c3', 'c4', 'c5'],
+	r => 'r3',
+	s => 's3',
 );
 
 my $file = "$Bin/testform1.html";
@@ -41,21 +70,18 @@ if(grep{ $_ eq '--output' } @ARGV){
 	print "$o2:\n", $o2->fill($file, \%param);
 	exit;
 }
-elsif(grep{ $_ eq '--large' } @ARGV){
-	print "Large content\n";
+
+my $info;
+if(grep{ $_ eq '--large' } @ARGV){
+	$info = "large content (full HTML file)";
 	$file = "$Bin/testform2.html";
 }
 else{
-	print "Small content\n";
+	$info = "small content (only a small form)";
 }
 
 my $str  = do{ local $/; open my($fh), $file or die $!; <$fh> };
 
-if(grep{ $_ eq '--reuse-object' } @ARGV){
-	print "with --reuse-object\n";
-	$o1 = $o1->new();
-	$o2 = $o2->new();
-}
 my @option;
 
 if(grep{ $_ eq '--target' } @ARGV){
@@ -63,14 +89,19 @@ if(grep{ $_ eq '--target' } @ARGV){
 	@option = (target => 'form1');
 }
 
+if(grep{ $_ eq '--instance' } @ARGV){
+	$o1 = $o1->new(@option);
+	$o2 = $o2->new(@option);
+	@option = ();
+}
 
 my $source;
 if(grep{ $_ eq '--scalar' } @ARGV){
-	print "fill in scalar\n";
+	print "Fills in a scalar of $info\n";
 	$source = \$str;
 }
 else{
-	print "fill in file\n";
+	print "Fills in a file of $info\n";
 	$source = $file;
 }
 

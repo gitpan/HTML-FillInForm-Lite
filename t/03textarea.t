@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 9;
+use Test::More tests => 11;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -18,6 +18,12 @@ my $o = HTML::FillInForm::Lite->new();
 
 is $o->fill(\qq{<textarea name="foo">xxx</textarea>}, \%q),
 	     qq{<textarea name="foo">bar</textarea>}, "fill textarea";
+
+is $o->fill(\qq{<textarea name='foo'>xxx</textarea>}, \%q),
+	     qq{<textarea name='foo'>bar</textarea>}, "fill textarea (single-quoted name)";
+
+is $o->fill(\qq{<textarea name=foo>xxx</textarea>}, \%q),
+	     qq{<textarea name=foo>bar</textarea>}, "fill textarea (unquoted name)";
 
 is $o->fill(\qq{<textarea name="foo">xxx</textarea>}, [{}, \%q]),
 	     qq{<textarea name="foo">bar</textarea>}, "fill textarea with array data";

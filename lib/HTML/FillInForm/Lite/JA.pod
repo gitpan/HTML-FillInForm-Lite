@@ -6,7 +6,7 @@ HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.05
+The document describes HTML::FillInForm version 0.06
 
 =head1 SYNOPSIS
 
@@ -35,9 +35,9 @@ The document describes HTML::FillInForm version 0.05
 
 
 C<HTML::FillInForm>はC<HTML::Parser>によって実装されていますが、
-このモジュールは正規表現ベースで実装されており、その結果
-C<HTML::FillInForm::Lite>はC<HTML::FillInForm>よりかなり高速で、
-最大で2倍ほど速く動きます。
+このモジュールは正規表現ベースで実装されています。
+その結果、C<HTML::FillInForm::Lite>はC<HTML::FillInForm>より最大で2倍ほど
+高速に動作します。
 
 =head1 METHODS
 
@@ -77,7 +77,7 @@ I<form_id>をもつフォームのみを処理対象にします。
 オプションを指定しないか、C<1>(真)を指定した場合、テキストフィールドに充填される
 値はHTMLエスケープされます。
 
-すでに値がHTMLエスケープされている場合は、C<0>を指定してください。
+すでに値がHTMLエスケープされている場合は、C<0>(偽)を指定してください。
 
 コードリファレンスを指定すると、値のエスケープにそのコードリファレンスを使います。
 
@@ -95,14 +95,14 @@ I<souce>をI<form_data>で充填します。
 
 C<fill()>を同じI<options>で何度も呼び出す場合は、
 C<fill()>の前にあらかじめC<new()>でインスタンスを作っておくと少し高速になります。
-しかし、同じインスタンスにつき一度しか呼び出さないなら、インスタンスを作ることに
-意味はありません。
+しかし、同じインスタンスにつき一度しか呼び出さないなら、インスタンスを作った
+としてもパフォーマンスは上がりません。
 
 =head1 LIMITATIONS
 
 =head2 C<HTML::FillInForm>との互換性
 
-このモジュールはC<HTML::FillInForm>2.0の新しい構文のみ実装しています。
+このモジュールはC<HTML::FillInForm>バージョン2の新しい構文のみ実装しています。
 
 =head2 古いHTMLとの互換性
 

@@ -6,7 +6,6 @@ use Test::More;
 
 BEGIN{
 	if($] < 5.008){
-		my $v = $] > 5.006 ? sprintf('%vd', $^V) : $];
 		plan skip_all => "for 5.8-style unicode semantics";
 	}
 	else{

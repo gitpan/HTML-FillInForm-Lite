@@ -6,7 +6,7 @@ use warnings;
 use FindBin qw($Bin);
 use Fatal qw(open close);
 
-use Test::More tests => 86;
+use Test::More tests => 85;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -48,8 +48,11 @@ my $s = q{<input name="foo" value="null" />};
 
 my $o = HTML::FillInForm::Lite->new();
 
+isa_ok $o, 'HTML::FillInForm::Lite';
+
 like $o->fill(\$s,  $q),  $x, "fill in scalar ref";
 like $o->fill([$s], $q),  $x, "in array ref";
+like $o->fill(['', $s], $q), $x, "in array ref(2)";
 like $o->fill($t, $q), $x, "in file";
 
 like $o->fill(do{ open my($fh), $t or die $!;  *$fh     }, $q), $x, "in filehandle";
@@ -79,6 +82,7 @@ like $o->fill(\$s,  \%q),        $x, "with hash";
 like $o->fill(\$s, [\%q]),       $x, "with array";
 like $o->fill(\$s, [ {}, \%q ]), $x, "with array";
 like $o->fill(\$s, \&my_param),  $x, "with subroutine";
+like $o->fill(\$s, [ {}, \&my_param]), $x, "with complex array";
 
 like(HTML::FillInForm::Lite->fill(\$s, \%q), $x, "fill() as class methods");
 
@@ -140,6 +144,28 @@ like(HTML::FillInForm::Lite->new(ignore_fields => ['foo'])
 like(HTML::FillInForm::Lite->new(ignore_fields => [])
 		->fill(\$s, $q, ignore_fields => ['foo']),
 		$unchanged, "new() and fill() with ignore_fields");
+
+# multi-fields
+
+my $mult = <<'EOT';
+<input name="foo"/>
+<input name="foo"/>
+EOT
+
+like(HTML::FillInForm::Lite->fill(\$mult, { foo => [qw(a b)] }),
+	qr{ value="a" .* value="b" }xms, "multi-fields");
+
+$mult = <<'EOT';
+<input name="foo" value="x"/>
+<input name="foo" value="x"/>
+<input name="foo" value="x"/>
+<input name="foo" value="x"/>
+EOT
+
+like(HTML::FillInForm::Lite->fill(\$mult, { foo => [qw(a b)] }),
+	qr{ value="a" .* value="b" .* value="x" .* value="x"}xms, "multi-fields");
+
+# chexbox
 
 like $o->fill(\ q{<input type="checkbox" name="foo" value="bar" />}, $q),
 	      $checked, "checkbox on";
@@ -289,45 +315,9 @@ is $o->fill(\$y, $q), $y, "rubbish in tag";
 $y = q{name="foo" value="null"};
 is $o->fill(\$y, $q), $y, "no HTML";
 
-eval{
-	$o->fill();
-};
-ok $@, "Error: no source suplied";
+# noop
 
-eval{
-	$o->fill('foo', undef);
-};
-
-ok $@, "Error: no data suplied";
-
-eval{
-	$o->fill('no_such_file', $q);
-};
-ok $@, "Error: cannot open file";
-
-eval{
-	$o->fill({}, \$s);
-};
-ok $@, "Correct error: bad arguments";
-
-eval{
-	$o->fill(\$s, \$s);
-};
-ok $@, "Correct error: cannot use scalar ref as query";
-
-eval{
-	$o->fill(\$s, bless {}, "the class that hase no param() method");
-};
-ok $@, "Correct error: cannot use the object as query";
-
-eval{
-	$o->fill(\$s, "foo");
-};
-ok $@, "Correct error: use scalar as query";
-
-eval{
-	$o->fill(\$s, {}, foobar => 1);
-};
-ok $@, "Correct error: unknown option";
+is $o->fill(\'', {}), '', "empty string";
+is $o->fill([],  {}), '', "empty array";
 
 #END

@@ -1,8 +1,8 @@
 #!perl
 
 use strict;
-use warnings;
-use Test::More tests => 34;
+use warnings FATAL => 'all';
+use Test::More tests => 31;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite'); }
 
@@ -10,15 +10,11 @@ BEGIN{
 	# import utilities
 
 	no strict 'refs';
-	foreach my $f(qw(get_name get_type get_id get_value extract)){
+	foreach my $f(qw(get_name get_type get_id get_value)){
 		*$f = \&{'HTML::FillInForm::Lite::_' . $f};
 	}
 }
 
-my $o = HTML::FillInForm::Lite->new();
-
-ok ref($o), "new() is ok";
-isa_ok $o, 'HTML::FillInForm::Lite';
 
 my $s = q{<input type="text" name="foo" value="bar" id="baz" />};
 
@@ -60,27 +56,49 @@ $s = q{<input value="&lt;&gt;" />};
 is get_value($s), '&lt;&gt;', "get raw data";
 
 
-is_deeply extract($s)->{input}, [$s], "tokenize <input>";
-is_deeply extract("blah blah $s blah blah")->{input}, [$s];
+eval{
+	HTML::FillInForm::Lite->new(foo => 'bar');
+};
+like $@, qr/unknown option/i, "Error: unknown option for new()";
 
-is_deeply extract("<input name='foo'>\n<input name='foo'/>\n\t<input name='foo' />")->{input},
-	["<input name='foo'>", "<input name='foo'/>", "<input name='foo' />"];
+eval{
+	HTML::FillInForm::Lite->fill([], {}, foo => 'bar');
+};
+like $@, qr/unknown option/i, "Error: unknown option for fill()";
 
-my $s2 = qq{<select name='foo'>\n\n<option>bar</option>\n\n</select>};
-is_deeply extract("\n\n$s2\n\n")->{select}, [$s2], "tokenize <select>";
+eval{
+	HTML::FillInForm::Lite->fill(undef, {});
+};
+like $@, qr/no source/i, "Error: no source suplied";
 
-my $s3 = qq{<textarea name='foo'>\n\nbar\n\n</textarea>};
-is_deeply extract("\n\n$s3\n\n")->{textarea}, [$s3], "tokenize <textarea>";
+eval{
+	HTML::FillInForm::Lite->fill('foo', undef);
+};
 
+like $@, qr/no data/i, "Error: no data suplied";
 
-is_deeply extract("$s $s $s2 $s2 $s3 $s3"),
-	{
-		input    => [$s,  $s],
-		select   => [$s2, $s2],
-		textarea => [$s3, $s3],
-	}, "tokenize all";
+eval{
+	HTML::FillInForm::Lite->fill('no_such_file', {});
+};
+like $@, qr/cannot open/i, "Error: cannot open file";
 
-is_deeply extract(q{<input>})->{input}, [], "ignore no attribute";
-is_deeply extract(q{<input type="text"})->{input}, [], "ignore syntax errors";
-is_deeply extract(q{<select name="foo">})->{select}, [], "ignore open <select> tag only";
-is_deeply extract(q{<textarea name="foo"></textare>})->{textarea}, [], "ignore typo";
+eval{
+	HTML::FillInForm::Lite->fill({}, \$s);
+};
+like $@, qr/not a/i, "Error: bad arguments";
+
+eval{
+	HTML::FillInForm::Lite->fill(\$s, \$s);
+};
+like $@, qr/cannot use/i, "Error: cannot use scalar ref as query";
+
+eval{
+	HTML::FillInForm::Lite->fill(\$s, bless {}, "the class that hase no param() method");
+};
+like $@, qr/cannot use/i, "Error: cannot use the object as query";
+
+eval{
+	HTML::FillInForm::Lite->fill(\$s, "foo");
+};
+like $@, qr/cannot use/i, "Error: cannot use scalar as query";
+

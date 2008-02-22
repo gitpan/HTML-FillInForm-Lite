@@ -58,7 +58,7 @@ sub fill{
 	# ensure to delete source and data
 	delete @option{qw(scalarref arrayref file fdat fobject)};
 
-	$option{fill_password} ||= 0;
+	$option{fill_password} = 1 unless defined $option{fill_password};
 
 	return $self->SUPER::fill($source, $data, %option);
 }

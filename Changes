@@ -1,11 +1,19 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+0.06 Thu Feb 21 19:56:55  2008
+	- fixed a bug of multi-fields
+	- fixed a bug of "target => 0"
+	- add several tests
+	- add misc/demo.cgi
+	- remove tokanizer tests
+	- a bit of optiomization
+
 0.05 Sun Feb 17 09:51:17  2008
 	- [IMPORTANT] fixed a bug of 'radio' fields
 		(now using 'checked' to check it, not 'selected')
 	- skip encoding test in 5.6.x
 	- changed 'disable_fields' to be ignored
-		because it is meaningless in HTML::FillInForm
+		because it seems meaningless in HTML::FillInForm
 		(at least as of version 2.0)
 
 0.04 Thu Feb 14 22:51:10  2008

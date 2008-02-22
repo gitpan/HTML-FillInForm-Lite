@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 8;
+use Test::More tests => 10;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -15,16 +15,23 @@ my %q = (
 
 my $o = HTML::FillInForm::Lite->new();
 
+my $x = qr{<option selected="selected">\s*bar\s*</option>};
 like $o->fill(\ qq{<select name="foo"><option>bar</option></select>}, \%q),
-	      qr{<option selected="selected">\s*bar\s*</option>},
+	$x,
 	  	  "select an option (no white-space)";
+like $o->fill(\ qq{<select name='foo'><option>bar</option></select>}, \%q),
+	$x,
+	  	  "select an option (single-quoted name)";
+like $o->fill(\ qq{<select name=foo><option>bar</option></select>}, \%q),
+	$x,
+	  	  "select an option (unquoted name)";
 
 like $o->fill(\ qq{<select name="foo">
 			<option>
 				bar
 			</option>
 		</select>}, \%q),
-	      qr{<option selected="selected">\s*bar\s*</option>},
+	$x,
 	  	  "select an option (including many white spaces)";
 
 

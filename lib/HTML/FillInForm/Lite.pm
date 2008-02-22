@@ -1,19 +1,21 @@
 package HTML::FillInForm::Lite;
 
+require 5.006_00;
+
 use strict;
 use warnings;
 use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.05';
+our $VERSION  = '0.06';
+
+# Regexp for HTML tags
 
 my $SPACE       =  q{\s};
 my $IDENT       =  q{[a-zA-Z]+};
 my $ATTR_VALUE  =  q{(?: " [^"]* " | ' [^']* ' | [^'">/\s]+ )};
 my $ATTR        = qq{(?:$SPACE+ $IDENT = $ATTR_VALUE )};
-
-#$ATTR = q{[^>]}; # a little faster, but recognizes invalid XHTML
 
 my $FORM     = qq{(?: <form     $ATTR+ $SPACE*>  )};
 my $INPUT    = qq{(?: <input    $ATTR+ $SPACE*/?>)};
@@ -28,37 +30,17 @@ my $END_TEXTAREA = q{(?: </textarea> )};
 
 my $CHECKED  = q{(?: checked  = (?: "checked " | 'checked'  | checked  ) )};
 my $SELECTED = q{(?: selected = (?: "selected" | 'selected' | selected ) )};
-
 #my $DISABLED = q{(?: disabled = (?: "disabled" | 'disabled' | disabled ) )};
 
-my $ID    = 'id';
-my $NAME  = 'name';
-my $TYPE  = 'type';
-my $VALUE = 'value';
-
-
-# Fixes the regexp components to match capital names
-foreach my $component(
-	$FORM, $INPUT, $SELECT, $OPTION, $TEXTAREA,
-	$END_FORM, $END_SELECT, $END_OPTION, $END_TEXTAREA,
-	$CHECKED, $SELECTED,
-#	$DISABLED,
-	$ID, $NAME, $TYPE, $VALUE){
-
-	$component =~ s{([a-z]{2,})}
-		{ join '', map{ qq/[$_\U$_]/ } split //, $1 }egxms;
-	#### $component
-}
-
-sub _extract{ # for debugging only
-	my $s = shift;
-	my %f = (input => [], select => [], textarea => []);
-	@{$f{input}}    = $s =~ m{($INPUT)}ogxms;
-	@{$f{select}}   = $s =~ m{($SELECT.*?$END_SELECT)}ogxms;
-	@{$f{textarea}} = $s =~ m{($TEXTAREA.*?$END_TEXTAREA)}ogxms;
-
-	return \%f;
-}
+#sub _extract{ # for debugging only
+#	my $s = shift;
+#	my %f = (input => [], select => [], textarea => []);
+#	@{$f{input}}    = $s =~ m{($INPUT)}ogxmsi;
+#	@{$f{select}}   = $s =~ m{($SELECT.*?$END_SELECT)}ogxmsi;
+#	@{$f{textarea}} = $s =~ m{($TEXTAREA.*?$END_TEXTAREA)}ogxmsi;
+#
+#	return \%f;
+#}
 
 sub new{
 	my $class = shift;
@@ -124,7 +106,7 @@ sub _parse_option{
 					: \&_escapeHTML
 			}
 			else{
-				$option{escape} = \&_noop_filter;
+				$option{escape} = \&_noop;
 			}
 		}
 		else{
@@ -168,63 +150,65 @@ sub fill{
 	}
 
 	# Form data to an object
-	$q = _to_form_object($q);
+	local $option->{data} =  _to_form_object($q);
+
+	# It's just a cache. It's needed to implement multi-text fields
+	local $option->{param_cache} = {};
 
 	# Fill in contents
-	if($option->{target}){
+	if(defined $option->{target}){
+
 		$content =~ s{ ($FORM) (.*?) ($END_FORM) }
 		             {	my($form, $content, $end_form) = ($1, $2, $3);
 
 				my $id = _get_id($form);
 				(defined($id) and $option->{target} eq $id)
-					? $form . _fill($option, $q, $content) . $end_form
+					? $form . _fill($option, $content) . $end_form
 					: $form . $content . $end_form
-			     }goexms;
+			     }goexmsi;
 		return $content;
 	}
 	else{
-		return _fill($option, $q, $content);
+		return _fill($option, $content);
 	}
 
 }
 
 sub _fill{
-	my($option, $q, $content) = @_;
-	$content =~ s{($INPUT)}{ _fill_input($option, $q, $1)        }goexms;
+	my($option, $content) = @_;
+	$content =~ s{($INPUT)}{ _fill_input($option, $1)        }goexmsi;
 
 	$content =~ s{($SELECT) (.*?) ($END_SELECT) }
-		     { $1 . _fill_select($option, $q, $1, $2) . $3   }goexms;
+		     { $1 . _fill_select($option, $1, $2) . $3   }goexmsi;
 
 	$content =~ s{($TEXTAREA) (.*?) ($END_TEXTAREA) }
-		     { $1 . _fill_textarea($option, $q, $1, $2) . $3 }goexms;
+		     { $1 . _fill_textarea($option, $1, $2) . $3 }goexmsi;
 
 	return $content;
 }
 
-sub _ignore{
-	my($option, $type, $name) = @_;
+sub _get_param{
+	my($option, $name, $type) = @_;
 
-	if(defined $name and length $name){
-		return     $option->{ignore_type}{$type}
-			|| $option->{ignore_field}{$name};
-	}
+	return if !defined($name)
+		or $option->{ignore_type} {$type}
+		or $option->{ignore_field}{$name};
 
-	return 1; # unnamed fields are ignored
+	my $ref = $option->{param_cache}{$name} ||= [ $option->{data}->param($name) ];
+
+	return @{$ref} ? $ref : undef;
 }
 
 sub _fill_input{
-	my($option, $q, $tag) = @_;
+	my($option, $tag) = @_;
 
 	### $tag
 
 	my $type  = _get_type($tag) || 'text';
 	my $name  = _get_name($tag);
 
-	my @values;
-	if(_ignore($option, $type, $name)
-		or not (@values = $q->param($name))) {
-		return $tag;
-	}
+	my $values_ref = _get_param($option, $name, $type)
+		or return $tag;
 
 #	_disable($option, $name, $tag);
 
@@ -234,83 +218,78 @@ sub _fill_input{
 		if(not defined $value){
 			$value = 'on';
 		}
-
-		if(grep{ $_ eq $value } @values){
-			$tag =~ /$CHECKED/oxms
+		if(grep{ $_ eq $value } @{$values_ref}){
+			$tag =~ /$CHECKED/oxmsi
 				or $tag =~ s{\s* /? > $}
 					    { checked="checked" />}xms;
 		}
 		else{
-			$tag =~ s/\s*$CHECKED//goxms;
+			$tag =~ s/\s+$CHECKED//goxmsi;
 		}
 	}
 	else{
-		my $new_value = $option->{escape}->($values[0]);
+		my $new_value = $option->{escape}->(shift @{$values_ref});
 
-		$tag =~ s{$VALUE = $ATTR_VALUE}{value="$new_value"}oxms
-				or $tag =~ s{\s* /? > $}
-					    { value="$new_value" />}xms;
+		$tag =~ s{value = $ATTR_VALUE}{value="$new_value"}oxmsi
+			or $tag =~ s{\s* /? > $}
+				    { value="$new_value" />}xms;
 	}
 	return $tag;
 }
 sub _fill_select{
-	my($option, $q, $tag, $content) = @_;
+	my($option, $tag, $content) = @_;
 
 	my $name = _get_name($tag);
 
-	my @values;
-	if(_ignore($option, 'select', $name)
-		or not (@values = $q->param($name))) {
-		return $content;
-	}
+	my $values_ref = _get_param($option, $name, 'select')
+		or return $content;
 
 #	_disable($option, $name, $tag);
 
 	$content =~ s{($OPTION) (.*?) ($END_OPTION)}
-		     { _fill_option($q, \@values, $1, $2) . $2 . $3 }goexsm;
+		     { _fill_option($values_ref, $1, $2) . $2 . $3 }goexsm;
 	return $content;
 }
 sub _fill_option{
-	my($q, $values_ref, $tag, $content) = @_;
+	my($values_ref, $tag, $content) = @_;
 
 	my $value = _get_value($tag);
 	unless( defined $value ){
 		$value = $content;
-		$value =~ s{\A $SPACE+   }{}oxms;
-		$value =~ s{   $SPACE+ \z}{}oxms;
+		$value =~ s{\A $SPACE+   } {}oxms;
+		$value =~ s{   $SPACE{2,}}{ }oxms;
+		$value =~ s{   $SPACE+ \z} {}oxms;
 	}
 
 	### @_
 	if(grep{ $value eq $_ } @{$values_ref}){
-		$tag =~ /$SELECTED/oxms
+		$tag =~ /$SELECTED/oxmsi
 			or $tag =~ s{ \s* > $}
 				    { selected="selected">}xms;
 	}
 	else{
-		$tag =~ s/\s*$SELECTED//goxms;
+		$tag =~ s/\s+$SELECTED//goxmsi;
 	}
 	return $tag;
 }
 
 sub _fill_textarea{
-	my($option, $q, $tag, $content) = @_;
+	my($option, $tag, $content) = @_;
 
 	my $name = _get_name($tag);
 
-	my @values;
-	if(_ignore($option, 'textarea', $name)
-		or not (@values = $q->param($name))) {
-		return $content;
-	}
+	my $values_ref = _get_param($option, $name, 'textarea')
+		or return $content;
+
 
 #	_disable($option, $name, $tag);
 
-	return $option->{escape}->($values[0]);
+	return $option->{escape}->(shift @{$values_ref});
 }
 
 # utilities
 
-sub _noop_filter{
+sub _noop{
 	return $_[0];
 }
 sub _escapeHTML{
@@ -342,19 +321,19 @@ sub _unquote{
 	return $2;
 }
 sub _get_id{
-	$_[0] =~ /$ID    = ($ATTR_VALUE)/oxms or return;
+	$_[0] =~ /id    = ($ATTR_VALUE)/oxmsi or return;
 	return _unquote($1);
 }
 sub _get_type{
-	$_[0] =~ /$TYPE  = ($ATTR_VALUE)/oxms or return;
+	$_[0] =~ /type  = ($ATTR_VALUE)/oxmsi or return;
 	return _unquote($1);
 }
 sub _get_name{
-	$_[0] =~ /$NAME  = ($ATTR_VALUE)/oxms or return;
+	$_[0] =~ /name  = ($ATTR_VALUE)/oxmsi or return;
 	return _unquote($1);
 }
 sub _get_value{
-	$_[0] =~ /$VALUE = ($ATTR_VALUE)/oxms or return;
+	$_[0] =~ /value = ($ATTR_VALUE)/oxmsi or return;
 	return _unquote($1);
 }
 
@@ -363,9 +342,9 @@ sub _get_value{
 #	my $name   = shift;
 #
 #	if($option->{disable_field}{$name}){
-#		$_[0] =~ /$DISABLED/oxms
+#		$_[0] =~ /$DISABLED/oxmsi
 #			or $_[0] =~ s{\s* /? > $}
-#				    { disabled="disabled" />}xms;
+#				    { disabled="disabled" />}xmsi;
 #	}
 #	return;
 #}
@@ -433,7 +412,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.05
+The document describes HTML::FillInForm version 0.06
 
 =head1 SYNOPSIS
 
@@ -461,7 +440,7 @@ This module fills in HTML forms with Perl data,
 which re-implements C<HTML::FillInForm> using regexp-based parser,
 not using C<HTML::Parser>.
 
-The difference in the parsers makes C<HTML::FillInForm::Lite> 2 or more
+The difference in the parsers makes C<HTML::FillInForm::Lite> about 2
 times faster than C<HTML::FillInForm>.
 
 =head1 METHODS
@@ -470,7 +449,7 @@ times faster than C<HTML::FillInForm>.
 
 Creates C<HTML::FillInForm::Lite> processer with I<options>.
 
-There are several options. All the methods are disabled when C<undef> is
+There are several options. All the options are disabled when C<undef> is
 suplied.
 
 Acceptable options are as follows:
@@ -481,8 +460,8 @@ Acceptable options are as follows:
 
 To enable passwords to be filled in, set the option true.
 
-Note that the effect of the option is the same as that of C<HTML::FillInForm>'s,
-but by default, C<HTML::FillInForm::Lite> ignores password fields.
+Note that the effect of the option is the same as that of C<HTML::FillInForm>,
+but by default C<HTML::FillInForm::Lite> ignores password fields.
 
 =item ignore_fields => I<array_ref_of_fields>
 
@@ -503,11 +482,11 @@ Note that it is not implemented in C<HTML::FillInForm>.
 If true is provided (or by default), values filled in text fields will be
 html-escaped, e.g. C<< <tag> >> to be C<< &lt;tag&gt; >>.
 
-The values are already html-escaped, set the option false.
+If the values are already html-escaped, set the option false.
 
 If a code reference is provided, it will be used to escape the values.
 
-Note that it not implemented in C<HTML::FillInForm>.
+Note that it is not implemented in C<HTML::FillInForm>.
 
 =back
 
@@ -526,8 +505,8 @@ empty string, like:
 
 	HTML::FillInForm::Lite->fill($source, sub{ '' });
 
-This is because if returning values are undefined, it will leave the elements
-untouched.
+I<form_data> as a subroutine is called in list context. That is, to leave
+some fields untouched, it must return C<()>, not C<undef>.
 
 =head1 LIMITATIONS
 
@@ -560,7 +539,7 @@ Moreover, it doesn't recognize ommited closing tags, like:
 		<option>baz
 	</select>
 
-When you can't get what you want, try to give your source to a HTML validator.
+When you can't get what you want, try to give your source to a HTML lint.
 
 =head2 Comment handling
 
@@ -577,11 +556,17 @@ HTML::FillInForm will process the code to be broken:
 
 To avoid such problems, you can use the C<ignore_fields> option.
 
+=head1 BUGS
+
+There are no known bugs.
+
+Bug reports and other feedback are welcome.
+
 =head1 SEE ALSO
 
 L<HTML::FillInForm>.
 
-L<HTML::FillInForm::Lite::JA> - document in Japanese.
+L<HTML::FillInForm::Lite::JA> - the document in Japanese.
 
 =head1 AUTHOR
 
