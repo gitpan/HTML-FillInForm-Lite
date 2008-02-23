@@ -107,7 +107,7 @@ else{
 
 
 print "\n";
-cmpthese timethese 0 => {
+cmpthese timethese -2 => {
 	'FIF'      => sub{ $o1->fill($source, \%param, @option) },
 	'Lite'     => sub{ $o2->fill($source, \%param, @option) },
 };

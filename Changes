@@ -1,5 +1,17 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+0.07 Sat Feb 23 09:12:22  2008
+	- allow any object as form data
+		(the idea comes from Class::DBI::Param)
+	- treat the utf8-flagged data better if perl >= 5.8.1
+		(the idea comes from HTML::FillInForm::ForceUTF8)
+	- remove 'ignore_types' option from the document,
+		because of its incompatibility.
+		it may be removed in the future version.
+	- add t/06fobj.t
+	- add utf8-flagged tests to t/05encoding.t
+	- add misc/demo.cgi for utf8 demonstration
+
 0.06 Thu Feb 21 19:56:55  2008
 	- fixed a bug of multi-fields
 	- fixed a bug of "target => 0"

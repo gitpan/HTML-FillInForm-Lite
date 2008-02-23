@@ -6,7 +6,7 @@ HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.06
+The document describes HTML::FillInForm version 0.07
 
 =head1 SYNOPSIS
 
@@ -18,7 +18,7 @@ The document describes HTML::FillInForm version 0.06
 
 	$output = $h->fill(\$html,    $q);
 	$output = $h->fill(\@html,    \%data);
-	$output = $h->fill(\*HTML,    \&get_param);
+	$output = $h->fill(\*HTML,    \&my_param);
 	$output = $h->fill('t.html', [$q, \%default]);
 
 	$output = $h->fill(\$html, $q,
@@ -26,6 +26,15 @@ The document describes HTML::FillInForm version 0.06
 		ignore_fields => ['foo', 'bar'],
 		target        => $form_id,
 	);
+
+	# Moreover, it accept any object as data
+	# (these classes come form Class::DBI's SYNOPSIS)
+
+	my $artist = Music::Artist->insert({ id => 1, name => 'U2' });
+	$output = $h->fill(\$html, $artist);
+
+	my $cd = Music::CD->retrieve(1);
+	$output = $h->fill(\$html, $cd);
 
 
 =head1 DESCRIPTION
@@ -66,12 +75,6 @@ C<HTML::FillInForm::Lite>のインスタンスを作成します。
 
 I<form_id>をもつフォームのみを処理対象にします。
 
-=item ignore_type => I<array_ref_of_types>
-
-指定したフォームタイプを無視するようになります。
-
-このオプションはC<HTML::FillInForm>では実装されていません。
-
 =item escape => I<bool> | I<ref>
 
 オプションを指定しないか、C<1>(真)を指定した場合、テキストフィールドに充填される
@@ -79,7 +82,7 @@ I<form_id>をもつフォームのみを処理対象にします。
 
 すでに値がHTMLエスケープされている場合は、C<0>(偽)を指定してください。
 
-コードリファレンスを指定すると、値のエスケープにそのコードリファレンスを使います。
+サブルーチンリファレンスを指定すると、値のエスケープにそのサブルーチンを使います。
 
 このオプションはC<HTML::FillInForm>では実装されていません。
 
@@ -98,7 +101,7 @@ C<fill()>の前にあらかじめC<new()>でインスタンスを作っておく
 しかし、同じインスタンスにつき一度しか呼び出さないなら、インスタンスを作った
 としてもパフォーマンスは上がりません。
 
-=head1 LIMITATIONS
+=head1 NOTES
 
 =head2 C<HTML::FillInForm>との互換性
 
@@ -130,7 +133,7 @@ C<fill()>の前にあらかじめC<new()>でインスタンスを作っておく
 
 =head2 コメントの扱い
 
-HTML::FillInForm::Liteはコメントやその他の無視すべきものを理解しないので、
+C<HTML::FillInForm::Lite>はコメントやその他の無視すべきものを理解しないので、
 処理できるものは全て処理します。
 
 このことが問題になることがあります。たとえば以下のコード:
@@ -142,6 +145,13 @@ HTML::FillInForm::Liteはコメントやその他の無視すべきものを理�
 	<script> document.write("<input name='foo' value="bar" />") </script>
 
 このような問題を避けるためにC<ignore_fields>オプションが使えます。
+
+=head1 BUGS
+
+No bugs have been reported.
+
+Please report any bug or feature request to E<lt>gfuji(at)cpan.orgE<gt>,
+or through L<http://rt.cpan.org>.
 
 =head1 SEE ALSO
 

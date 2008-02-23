@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 11;
+use Test::More tests => 15;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -46,3 +46,20 @@ is $o->fill(\qq{<textarea name="foo">xxx</textarea>}, { foo => undef }),
 is $o->fill(\qq{<textarea name="foo">xxx}, \%q),
 	     qq{<textarea name="foo">xxx}, "ignore syntax error";
 
+
+my $s = <<'EOT';
+<form id="bar">
+<textarea name="foo" id="0">0</textarea>
+<textarea name="foo" id="1">1</textarea>
+<textarea name="foo" id="2">2</textarea>
+<form>
+EOT
+
+$q{foo} = [qw(foo0 foo1)];
+
+is $o->fill(\$s, \%q, target => "foo"), $s, "target => _";
+my $output = $o->fill(\$s, \%q);
+
+like $output, qr/ id="0"[^>]* >foo0< /xms, "multi-textareas(0)";
+like $output, qr/ id="1"[^>]* >foo1< /xms, "multi-textareas(1)";
+like $output, qr/ id="2"[^>]* >2< /xms,    "multi-textareas(2) - out of range";

@@ -2,7 +2,7 @@
 
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 31;
+use Test::More tests => 33;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite'); }
 
@@ -87,18 +87,30 @@ eval{
 };
 like $@, qr/not a/i, "Error: bad arguments";
 
+# Cannot use '%s' as form object
+
 eval{
 	HTML::FillInForm::Lite->fill(\$s, \$s);
 };
-like $@, qr/cannot use/i, "Error: cannot use scalar ref as query";
+like $@, qr/cannot use/i, "Error: cannot use SCALAR ref as form data";
 
 eval{
-	HTML::FillInForm::Lite->fill(\$s, bless {}, "the class that hase no param() method");
+	HTML::FillInForm::Lite->fill(\$s, *GLOB);
 };
-like $@, qr/cannot use/i, "Error: cannot use the object as query";
+like $@, qr/cannot use/i, "Error: cannot use GLOB as form data";
+
+eval{
+	HTML::FillInForm::Lite->fill(\$s, \*GLOB);
+};
+like $@, qr/cannot use/i, "Error: cannot use GLOB ref as form data";
 
 eval{
 	HTML::FillInForm::Lite->fill(\$s, "foo");
 };
-like $@, qr/cannot use/i, "Error: cannot use scalar as query";
+like $@, qr/cannot use/i, "Error: cannot use string as form data";
+
+eval{
+	HTML::FillInForm::Lite->fill(\$s, 0);
+};
+like $@, qr/cannot use/i, "Error: cannot use 0 as form data";
 

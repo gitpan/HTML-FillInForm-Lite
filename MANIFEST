@@ -1,6 +1,13 @@
 Changes
+lib/HTML/FillInForm/Lite.pm
+lib/HTML/FillInForm/Lite/JA.pod
 Makefile.PL
 MANIFEST
+misc/benchmark.pl
+misc/demo.cgi
+misc/lib/HTML/FillInForm/Lite/Compat.pm
+misc/testform1.html
+misc/testform2.html
 README
 t/00basic.t
 t/01input.t
@@ -8,11 +15,6 @@ t/02select.t
 t/03textarea.t
 t/04target.t
 t/05encoding.t
+t/06fobj.t
 t/test.html
-misc/benchmark.pl
-misc/testform1.html
-misc/testform2.html
-misc/lib/HTML/FillInForm/Lite/Compat.pm
-lib/HTML/FillInForm/Lite.pm
-lib/HTML/FillInForm/Lite/JA.pod
 META.yml                                 Module meta-data (added by MakeMaker)

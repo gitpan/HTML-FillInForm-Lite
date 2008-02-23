@@ -1,6 +1,6 @@
 package HTML::FillInForm::Lite;
 
-require 5.006_00;
+require 5.006_000;
 
 use strict;
 use warnings;
@@ -8,13 +8,13 @@ use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.06';
+our $VERSION  = '0.07';
 
 # Regexp for HTML tags
 
 my $SPACE       =  q{\s};
 my $IDENT       =  q{[a-zA-Z]+};
-my $ATTR_VALUE  =  q{(?: " [^"]* " | ' [^']* ' | [^'">/\s]+ )};
+my $ATTR_VALUE  =  q{(?: " [^"]* " | ' [^']* ' | [^'"/>/\s]+ )};
 my $ATTR        = qq{(?:$SPACE+ $IDENT = $ATTR_VALUE )};
 
 my $FORM     = qq{(?: <form     $ATTR+ $SPACE*>  )};
@@ -41,6 +41,7 @@ my $SELECTED = q{(?: selected = (?: "selected" | 'selected' | selected ) )};
 #
 #	return \%f;
 #}
+
 
 sub new{
 	my $class = shift;
@@ -149,10 +150,15 @@ sub fill{
 		$content = do{ local $/ = undef; <$src> };
 	}
 
+	# only Perl >= 5.8.1
+	local $option->{utf8} = defined(&utf8::is_utf8)
+		? utf8::is_utf8($content)
+		: 0;
+
 	# Form data to an object
 	local $option->{data} =  _to_form_object($q);
 
-	# It's just a cache. It's needed to implement multi-text fields
+	# It's not just a cache. It's needed to implement multi-text fields
 	local $option->{param_cache} = {};
 
 	# Fill in contents
@@ -185,18 +191,6 @@ sub _fill{
 		     { $1 . _fill_textarea($option, $1, $2) . $3 }goexmsi;
 
 	return $content;
-}
-
-sub _get_param{
-	my($option, $name, $type) = @_;
-
-	return if !defined($name)
-		or $option->{ignore_type} {$type}
-		or $option->{ignore_field}{$name};
-
-	my $ref = $option->{param_cache}{$name} ||= [ $option->{data}->param($name) ];
-
-	return @{$ref} ? $ref : undef;
 }
 
 sub _fill_input{
@@ -289,6 +283,31 @@ sub _fill_textarea{
 
 # utilities
 
+sub _get_param{
+	my($option, $name, $type) = @_;
+
+	return if !defined($name)
+		or $option->{ignore_type} {$type}
+		or $option->{ignore_field}{$name};
+
+	my $ref = $option->{param_cache}{$name};
+
+	if(not defined $ref){
+		# fetching and other processing
+		$ref = $option->{param_cache}{$name}
+			= [ $option->{data}->param($name) ];
+
+		if($option->{utf8}){
+			for my $datum( @$ref ){
+				utf8::decode($datum)
+					unless utf8::is_utf8($datum);
+			}
+		}
+	}
+
+	return @{$ref} ? $ref : undef;
+}
+
 sub _noop{
 	return $_[0];
 }
@@ -352,7 +371,11 @@ sub _get_value{
 sub _to_form_object{
 	my($ref) = @_;
 
-	my $type = ref $ref;
+	my $type    = ref $ref;
+
+	# Is it blessed?
+	my $blessed = $type ne ''
+			&& !!do{ local $@; eval{ $ref->can('VERSION') }};
 
 	my $wrapper;
 	if($type eq 'HASH'){
@@ -361,7 +384,7 @@ sub _to_form_object{
 			= map{
 				ref($_) eq 'ARRAY' ?  $_  :
 				defined($_)        ? [$_] :
-						     ();
+						      ();
 			     } values %{$ref};
 	}
 	elsif($type eq 'ARRAY'){
@@ -371,11 +394,16 @@ sub _to_form_object{
 	elsif($type eq 'CODE'){
 		$wrapper = \$ref;
 	}
-	elsif($type and $type->can('param')){ # e.g. an instance of CGI.pm
+	elsif(not $blessed){
+		croak("Cannot use $ref as form data");
+	}
+	elsif($ref->can('param')){ # a request object e.g. CGI.pm
 		return $ref;
 	}
 	else{
-		croak("Cannot use '$ref' as form data");
+		# any object is ok
+		$wrapper = \$ref;
+		$type    = 'Object';
 	}
 
 	return bless $wrapper => __PACKAGE__ . '::' . $type;
@@ -399,6 +427,13 @@ sub HTML::FillInForm::Lite::CODE::param{
 
 	return ${$ref_to_code_ref}->($key);
 }
+sub HTML::FillInForm::Lite::Object::param{
+	my($ref_to_object, $key) = @_;
+	my $method = ${$ref_to_object}->can($key)  or return ();
+	my(@values) = ${$ref_to_object}->$method();
+
+	return @values == 1 && !defined($values[0]) ? () : @values;
+}
 
 1;
 
@@ -412,7 +447,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.06
+The document describes HTML::FillInForm version 0.07
 
 =head1 SYNOPSIS
 
@@ -424,7 +459,7 @@ The document describes HTML::FillInForm version 0.06
 
 	$output = $h->fill(\$html,    $q);
 	$output = $h->fill(\@html,    \%data);
-	$output = $h->fill(\*HTML,    \&get_param);
+	$output = $h->fill(\*HTML,    \&my_param);
 	$output = $h->fill('t.html', [$q, \%default]);
 
 	$output = $h->fill(\$html, $q,
@@ -433,6 +468,14 @@ The document describes HTML::FillInForm version 0.06
 		target        => $form_id,
 	);
 
+	# Moreover, it accepts any object as data
+	# (these classes come form Class::DBI's SYNOPSIS)
+
+	my $artist = Music::Artist->insert({ id => 1, name => 'U2' });
+	$output = $h->fill(\$html, $artist);
+
+	my $cd = Music::CD->retrieve(1);
+	$output = $h->fill(\$html, $cd);
 
 =head1 DESCRIPTION
 
@@ -471,12 +514,6 @@ To ignore some fields from filling.
 
 To fill in just the form identified by I<form_id>.
 
-=item ignore_type => I<array_ref_of_types>
-
-To ignore some types from filling.
-
-Note that it is not implemented in C<HTML::FillInForm>.
-
 =item escape => I<bool> | I<ref>
 
 If true is provided (or by default), values filled in text fields will be
@@ -484,7 +521,7 @@ html-escaped, e.g. C<< <tag> >> to be C<< &lt;tag&gt; >>.
 
 If the values are already html-escaped, set the option false.
 
-If a code reference is provided, it will be used to escape the values.
+If a subroutine reference is provided, it will be used to escape the values.
 
 Note that it is not implemented in C<HTML::FillInForm>.
 
@@ -508,7 +545,7 @@ empty string, like:
 I<form_data> as a subroutine is called in list context. That is, to leave
 some fields untouched, it must return C<()>, not C<undef>.
 
-=head1 LIMITATIONS
+=head1 NOTES
 
 =head2 Compatibility with C<HTML::FillInForm>
 
@@ -558,9 +595,10 @@ To avoid such problems, you can use the C<ignore_fields> option.
 
 =head1 BUGS
 
-There are no known bugs.
+No bugs have been reported.
 
-Bug reports and other feedback are welcome.
+Please report any bug or feature request to E<lt>gfuji(at)cpan.orgE<gt>,
+or through L<http://rt.cpan.org>.
 
 =head1 SEE ALSO
 
