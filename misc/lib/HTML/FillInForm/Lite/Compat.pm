@@ -1,24 +1,25 @@
-package
-	HTML::FillInForm::Lite::Compat;
+package HTML::FillInForm::Lite::Compat;
 
 use strict;
 use warnings;
-use Carp qw(croak);
 
-our $VERSION = '0.01';
-
-$INC{'HTML/FillInForm.pm'} ||= __FILE__;
+our $VERSION = '0.02';
 
 use HTML::FillInForm::Lite;
 our @ISA = qw(HTML::FillInForm::Lite);
 
-push @HTML::FillInForm::ISA, __PACKAGE__
-	unless grep { $_ eq __PACKAGE__ } @HTML::FillInForm::ISA;
+sub import{
+	shift;
+	if(grep { $_ eq '-takeover' } @_){
+		$INC{'HTML/FillInForm.pm'} ||= __FILE__;
+		push @HTML::FillInForm::ISA, __PACKAGE__
+			unless HTML::FillInForm->isa(__PACKAGE__);
+	}
+}
 
-# copy from HTML::FillInForm
-sub fill_file		{ my $self = shift; return $self->fill('file',     @_); }
-sub fill_arrayref	{ my $self = shift; return $self->fill('arrayref' ,@_); }
-sub fill_scalarref	{ my $self = shift; return $self->fill('scalarref',@_); }
+sub fill_file		{ my $self = shift; return $self->fill(@_); }
+sub fill_arrayref	{ my $self = shift; return $self->fill(@_); }
+sub fill_scalarref	{ my $self = shift; return $self->fill(@_); }
 
 my %known_keys = (
 	scalarref	=> 1,
@@ -42,11 +43,11 @@ sub fill{
 	my $source;
 	my $data;
 
-	if(ref $_[0] or not $known_keys{ $_[0] }) {
+	if(not $known_keys{ $_[0] || '' }) {
 		$source = shift;
 	}
 
-	if (ref $_[0]) {
+	if (not $known_keys{ $_[0] || ''}) {
 		$data = shift;
 	}
 
@@ -55,7 +56,7 @@ sub fill{
 	$source ||= $option{scalarref} || $option{arrayref} || $option{file};
 	$data   ||= $option{fdat} || $option{fobject};
 
-	# ensure to delete source and data
+	# ensure to delete all sources and data
 	delete @option{qw(scalarref arrayref file fdat fobject)};
 
 	$option{fill_password} = 1 unless defined $option{fill_password};
@@ -69,17 +70,29 @@ __END__
 
 =head1 NAME
 
-HTML::FillInForm::Lite::Compat - Replaces FillInForm by FillInForm::Lite
+HTML::FillInForm::Lite::Compat - Provides compatibility with HTML::FillInForm
 
 =head1 SYNOPSIS
 
-	perl -MHTML::FillInForm::Lite::Compat foo.pl
+	perl -MHTML::FillInForm::Lite::Compat=-takeover foo.pl
 
 =head1 DESCRIPTION
+
+This module provides the compatible interface with C<HTML::FillInForm>.
+
+And with C<-takeover> option, it replaces C<HTML::FillInForm> by
+C<HTML::FillInForm::Lite> so that scripts and modules that depend on
+C<HTML::FillInForm> go without it.
+
+See L<HTML::FillInForm::Lite> and L<HTML::FillInForm> for details.
+
+=begin comment
 
 Firstly, this wapper module was intended to test compatibility with
 C<HTML::FillInForm>. However, the plan was failed, because the tests in
 the C<HTML::FillInForm> distribution is too specific to be passed through by
 C<HTML::FillInForm::Lite>.
+
+=end comment
 
 =cut

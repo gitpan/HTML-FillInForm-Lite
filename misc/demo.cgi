@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+use 5.008_001;
 use strict;
 use warnings FATAL => 'all';
 use CGI;
@@ -12,7 +13,7 @@ binmode *DATA  , ":utf8";
 
 my $q = CGI->new;
 
-print $q->header(-charset => 'utf-8', -type => "application/xhtml+xml");
+print $q->header(-charset => 'utf-8');
 print HTML::FillInForm::Lite->fill(
 	\*DATA,
 	$q,
@@ -23,7 +24,7 @@ __DATA__
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
 	"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<title>FillInForm Demo</title>
 </head>

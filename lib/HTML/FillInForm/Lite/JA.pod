@@ -6,7 +6,7 @@ HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.07
+The document describes HTML::FillInForm version 0.08
 
 =head1 SYNOPSIS
 
@@ -42,7 +42,6 @@ The document describes HTML::FillInForm version 0.07
 このモジュールはHTMLのフォームにデータを充填します。
 これはC<HTML::FillInForm>を再実装したものです。
 
-
 C<HTML::FillInForm>はC<HTML::Parser>によって実装されていますが、
 このモジュールは正規表現ベースで実装されています。
 その結果、C<HTML::FillInForm::Lite>はC<HTML::FillInForm>より最大で2倍ほど
@@ -59,7 +58,7 @@ C<HTML::FillInForm::Lite>のインスタンスを作成します。
 
 =over 4
 
-=item fill_password => I<bool_value>
+=item fill_password => I<bool>
 
 このオプションを真に設定すると、パスワードも充填されるようになります。
 
@@ -109,8 +108,9 @@ C<fill()>の前にあらかじめC<new()>でインスタンスを作っておく
 
 =head2 古いHTMLとの互換性
 
-このモジュールはXHTML1.xに対応しています。
-また、HTML4.xの大部分もサポートしていますが、一部制限があります。
+このモジュールはXHTML1.xを処理するように設計されています。
+HTML4.xの大部分もサポートはしていますが、一部制限があります。
+
 まず、HTML4では許されている属性名の省略はできません。
 
 たとえば:

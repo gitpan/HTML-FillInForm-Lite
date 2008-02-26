@@ -1,9 +1,9 @@
-#!/usr/bin/perl
+#!perl
 
 use strict;
 use warnings;
 
-use Test::More tests => 15;
+use Test::More tests => 17;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -63,3 +63,11 @@ my $output = $o->fill(\$s, \%q);
 like $output, qr/ id="0"[^>]* >foo0< /xms, "multi-textareas(0)";
 like $output, qr/ id="1"[^>]* >foo1< /xms, "multi-textareas(1)";
 like $output, qr/ id="2"[^>]* >2< /xms,    "multi-textareas(2) - out of range";
+
+# re-fill
+$s = qq{<textarea name="foo">xxx</textarea>};
+$output = $o->fill(\$s, \%q);
+
+for(1 .. 2){
+	is $o->fill(\$output, \%q), $output, "re-fill ($_)";
+}

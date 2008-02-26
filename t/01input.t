@@ -1,4 +1,4 @@
-#!perl
+#!perl -T
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use FindBin qw($Bin);
 use Fatal qw(open close);
 
-use Test::More tests => 85;
+use Test::More tests => 88;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -22,6 +22,8 @@ my %q = (
 	b => q{"bar"},
 	c => q{<bar>},
 	d => q{'bar'},
+
+	default => ['on'],
 );
 
 my $x     = qr{value="bar"};
@@ -236,6 +238,10 @@ unlike $o->fill(\ q{<input type="radio" value="A" />}, $q),
 unlike $o->fill(\ q{<input type="radio" name="s" />}, $q),
 	$checked, "ignore undefined value";
 
+like $o->fill(\ q{<input type="radio" name="default" />}, $q),
+	$checked, "default radio button to on";
+
+# HTML escape
 
 like $o->fill(\ q{<input type="text" value="" name="b" />}, $q),
 	$x_b, "HTML escape";
@@ -319,5 +325,12 @@ is $o->fill(\$y, $q), $y, "no HTML";
 
 is $o->fill(\'', {}), '', "empty string";
 is $o->fill([],  {}), '', "empty array";
+
+# re-fill
+
+my $output = $o->fill(\$s, $q);
+for(1 .. 2){
+	is $o->fill(\$output, $q), $output, "re-fill($_)";
+}
 
 #END

@@ -8,7 +8,7 @@ use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.07';
+our $VERSION  = '0.08';
 
 # Regexp for HTML tags
 
@@ -30,6 +30,8 @@ my $END_TEXTAREA = q{(?: </textarea> )};
 
 my $CHECKED  = q{(?: checked  = (?: "checked " | 'checked'  | checked  ) )};
 my $SELECTED = q{(?: selected = (?: "selected" | 'selected' | selected ) )};
+my $MULTIPLE = q{(?: multiple = (?: "multiple" | 'multiple' | multiple ) )};
+
 #my $DISABLED = q{(?: disabled = (?: "disabled" | 'disabled' | disabled ) )};
 
 #sub _extract{ # for debugging only
@@ -45,20 +47,19 @@ my $SELECTED = q{(?: selected = (?: "selected" | 'selected' | selected ) )};
 
 sub new{
 	my $class = shift;
-
-	my $option = $class->_parse_option(@_);
-	return bless $option => $class;
+	my $ctx = $class->_parse_option(@_);
+	return bless $ctx => $class;
 }
 
 sub _parse_option{
 	my $self = shift;
 
-	if(ref $self and not @_){ # HTML::FillInForm::Lite->new(...)->fill(...)
+	if(ref $self and not @_){ # as instance method with no option
 		return $self;
 	}
 
-	my %option = (
-		ignore_type => {
+	my %ctx = (
+		ignore_types => {
 			button   => 1,
 			submit   => 1,
 			reset    => 1,
@@ -74,11 +75,11 @@ sub _parse_option{
 		my $val = $self->{$key};
 
 		if(ref($val) eq 'HASH'){
-			@{ $option{$key} }{ keys %{$val} }
+			@{ $ctx{$key} }{ keys %{$val} }
 				= values %{$val};
 		}
 		else{
-			$option{$key} = $val;
+			$ctx{$key} = $val;
 		}
 	}
 
@@ -90,24 +91,23 @@ sub _parse_option{
 			or $opt eq 'disable_fields'
 		){
 
-			chop $opt; # plural to singular
-			@{ $option{$opt} ||= {} }{ @{$val} }
+			@{ $ctx{$opt} ||= {} }{ @{$val} }
 				= (1) x @{$val};
 		}
 		elsif($opt eq 'fill_password'){
-			$option{ignore_type}{password} = !$val;
+			$ctx{ignore_types}{password} = !$val;
 		}
 		elsif($opt eq 'target'){
-			$option{target} = $val;
+			$ctx{target} = $val;
 		}
 		elsif($opt eq 'escape'){
 			if($val){
-				$option{escape} = ref($val) eq 'CODE'
+				$ctx{escape} = ref($val) eq 'CODE'
 					? $val
 					: \&_escapeHTML
 			}
 			else{
-				$option{escape} = \&_noop;
+				$ctx{escape} = \&_noop;
 			}
 		}
 		else{
@@ -115,7 +115,7 @@ sub _parse_option{
 		}
 	}
 
-	return \%option;
+	return \%ctx;
 }
 
 sub fill{
@@ -128,9 +128,9 @@ sub fill{
 		croak('No data suplied');
 	}
 
-	my $option = $self->_parse_option(@opt);
+	my $ctx = $self->_parse_option(@opt);
 
-	### $option
+	### $ctx
 
 
 	# HTML source to a scalar
@@ -143,68 +143,67 @@ sub fill{
 	}
 	else{
 		if(not defined fileno $src){
-			open my($in), '<', $src
+			open my($in), $src
 				or croak("Cannot open '$src': $!");
 			$src = $in;
 		}
 		$content = do{ local $/ = undef; <$src> };
 	}
-
 	# only Perl >= 5.8.1
-	local $option->{utf8} = defined(&utf8::is_utf8)
+	local $ctx->{utf8} = defined(&utf8::is_utf8)
 		? utf8::is_utf8($content)
 		: 0;
 
 	# Form data to an object
-	local $option->{data} =  _to_form_object($q);
+	local $ctx->{data} =  _to_form_object($q);
 
 	# It's not just a cache. It's needed to implement multi-text fields
-	local $option->{param_cache} = {};
+	local $ctx->{param_cache} = {};
 
 	# Fill in contents
-	if(defined $option->{target}){
+	if(defined $ctx->{target}){
 
 		$content =~ s{ ($FORM) (.*?) ($END_FORM) }
 		             {	my($form, $content, $end_form) = ($1, $2, $3);
 
 				my $id = _get_id($form);
-				(defined($id) and $option->{target} eq $id)
-					? $form . _fill($option, $content) . $end_form
+				(defined($id) and $ctx->{target} eq $id)
+					? $form . _fill($ctx, $content) . $end_form
 					: $form . $content . $end_form
 			     }goexmsi;
 		return $content;
 	}
 	else{
-		return _fill($option, $content);
+		return _fill($ctx, $content);
 	}
 
 }
 
 sub _fill{
-	my($option, $content) = @_;
-	$content =~ s{($INPUT)}{ _fill_input($option, $1)        }goexmsi;
+	my($ctx, $content) = @_;
+	$content =~ s{($INPUT)}{ _fill_input($ctx, $1)        }goexmsi;
 
 	$content =~ s{($SELECT) (.*?) ($END_SELECT) }
-		     { $1 . _fill_select($option, $1, $2) . $3   }goexmsi;
+		     { $1 . _fill_select($ctx, $1, $2) . $3   }goexmsi;
 
 	$content =~ s{($TEXTAREA) (.*?) ($END_TEXTAREA) }
-		     { $1 . _fill_textarea($option, $1, $2) . $3 }goexmsi;
+		     { $1 . _fill_textarea($ctx, $1, $2) . $3 }goexmsi;
 
 	return $content;
 }
 
 sub _fill_input{
-	my($option, $tag) = @_;
+	my($ctx, $tag) = @_;
 
 	### $tag
 
 	my $type  = _get_type($tag) || 'text';
 	my $name  = _get_name($tag);
 
-	my $values_ref = _get_param($option, $name, $type)
+	my $values_ref = _get_param($ctx, $name, $type)
 		or return $tag;
 
-#	_disable($option, $name, $tag);
+#	_disable($ctx, $name, $tag);
 
 	if($type eq 'checkbox' or $type eq 'radio'){
 		my $value = _get_value($tag);
@@ -222,7 +221,7 @@ sub _fill_input{
 		}
 	}
 	else{
-		my $new_value = $option->{escape}->(shift @{$values_ref});
+		my $new_value = $ctx->{escape}->(shift @{$values_ref});
 
 		$tag =~ s{value = $ATTR_VALUE}{value="$new_value"}oxmsi
 			or $tag =~ s{\s* /? > $}
@@ -231,14 +230,18 @@ sub _fill_input{
 	return $tag;
 }
 sub _fill_select{
-	my($option, $tag, $content) = @_;
+	my($ctx, $tag, $content) = @_;
 
 	my $name = _get_name($tag);
 
-	my $values_ref = _get_param($option, $name, 'select')
+	my $values_ref = _get_param($ctx, $name, 'select')
 		or return $content;
 
-#	_disable($option, $name, $tag);
+	if($tag !~ /$MULTIPLE/oxmsi){
+		$values_ref = [ shift @{ $values_ref } ]; # in select-one
+	}
+
+#	_disable($ctx, $name, $tag);
 
 	$content =~ s{($OPTION) (.*?) ($END_OPTION)}
 		     { _fill_option($values_ref, $1, $2) . $2 . $3 }goexsm;
@@ -256,7 +259,7 @@ sub _fill_option{
 	}
 
 	### @_
-	if(grep{ $value eq $_ } @{$values_ref}){
+	if(grep{ $value eq $_ }  @{$values_ref}){
 		$tag =~ /$SELECTED/oxmsi
 			or $tag =~ s{ \s* > $}
 				    { selected="selected">}xms;
@@ -268,36 +271,35 @@ sub _fill_option{
 }
 
 sub _fill_textarea{
-	my($option, $tag, $content) = @_;
+	my($ctx, $tag, $content) = @_;
 
 	my $name = _get_name($tag);
 
-	my $values_ref = _get_param($option, $name, 'textarea')
+	my $values_ref = _get_param($ctx, $name, 'textarea')
 		or return $content;
 
 
-#	_disable($option, $name, $tag);
+#	_disable($ctx, $name, $tag);
 
-	return $option->{escape}->(shift @{$values_ref});
+	return $ctx->{escape}->(shift @{$values_ref});
 }
 
 # utilities
 
 sub _get_param{
-	my($option, $name, $type) = @_;
-
+	my($ctx, $name, $type) = @_;
 	return if !defined($name)
-		or $option->{ignore_type} {$type}
-		or $option->{ignore_field}{$name};
+		or $ctx->{ignore_types} {$type}
+		or $ctx->{ignore_fields}{$name};
 
-	my $ref = $option->{param_cache}{$name};
+	my $ref = $ctx->{param_cache}{$name};
 
 	if(not defined $ref){
 		# fetching and other processing
-		$ref = $option->{param_cache}{$name}
-			= [ $option->{data}->param($name) ];
+		$ref = $ctx->{param_cache}{$name}
+			= [ $ctx->{data}->param($name) ];
 
-		if($option->{utf8}){
+		if($ctx->{utf8}){
 			for my $datum( @$ref ){
 				utf8::decode($datum)
 					unless utf8::is_utf8($datum);
@@ -357,10 +359,10 @@ sub _get_value{
 }
 
 #sub _disable{
-#	my $option = shift;
+#	my $ctx = shift;
 #	my $name   = shift;
 #
-#	if($option->{disable_field}{$name}){
+#	if($ctx->{disable_fields}{$name}){
 #		$_[0] =~ /$DISABLED/oxmsi
 #			or $_[0] =~ s{\s* /? > $}
 #				    { disabled="disabled" />}xmsi;
@@ -395,7 +397,7 @@ sub _to_form_object{
 		$wrapper = \$ref;
 	}
 	elsif(not $blessed){
-		croak("Cannot use $ref as form data");
+		croak("Cannot use '$ref' as form data");
 	}
 	elsif($ref->can('param')){ # a request object e.g. CGI.pm
 		return $ref;
@@ -447,7 +449,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.07
+The document describes HTML::FillInForm version 0.08
 
 =head1 SYNOPSIS
 
@@ -459,7 +461,7 @@ The document describes HTML::FillInForm version 0.07
 
 	$output = $h->fill(\$html,    $q);
 	$output = $h->fill(\@html,    \%data);
-	$output = $h->fill(\*HTML,    \&my_param);
+	$output = $h->fill(\*HTML,    \&my_param); # yes, \&my_param is ok
 	$output = $h->fill('t.html', [$q, \%default]);
 
 	$output = $h->fill(\$html, $q,
@@ -468,7 +470,7 @@ The document describes HTML::FillInForm version 0.07
 		target        => $form_id,
 	);
 
-	# Moreover, it accepts any object as data
+	# Moreover, it accepts any object as form data
 	# (these classes come form Class::DBI's SYNOPSIS)
 
 	my $artist = Music::Artist->insert({ id => 1, name => 'U2' });
@@ -531,9 +533,9 @@ Note that it is not implemented in C<HTML::FillInForm>.
 
 Fills in I<source> with I<form_data>.
 
-The I<options> are the same as C<new()>'s.
+I<options> are the same as C<new()>'s.
 
-You can use this method as both class or instance method, 
+You can use this method as a both class or instance method, 
 but you make multiple calls to C<fill()> with the same
 options, it is a little faster to call C<new()> before C<fill()>.
 

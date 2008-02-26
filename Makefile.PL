@@ -4,8 +4,11 @@ use 5.006_000;
 use ExtUtils::MakeMaker;
 
 if($] == 5.008_000){
-	warn "WARNING:  Perl 5.8.0 is not recommended,",
-		"because of lack of utf8::is_utf8()";
+	warn <<'EOT';
+WARNING:  Perl 5.8.0 is not recommended. If you'd like to use unicode in Perl,
+          you should upgrade Perl to 5.8.1 or later.
+
+EOT
 }
 
 WriteMakefile(

@@ -15,6 +15,10 @@ t/02select.t
 t/03textarea.t
 t/04target.t
 t/05encoding.t
-t/06fobj.t
+t/06encoding_sjis.t
+t/07fobj.t
+t/08select-extra.t
+t/10original.t
 t/test.html
+t/test_sjis.html
 META.yml                                 Module meta-data (added by MakeMaker)

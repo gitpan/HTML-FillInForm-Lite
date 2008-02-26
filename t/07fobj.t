@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!perl
 
 # tests for Extented form object
 

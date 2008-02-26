@@ -1,18 +1,16 @@
-#!/usr/bin/perl
+#!perl
 
 use strict;
 use warnings;
-use Test::More tests => 8;
-
+use Test::More;
 
 BEGIN{
-	if($] == 5.008_000){
-		diag <<'WARN';
-Perl 5.8.0 is not recommended, because it doesn't have utf8::is_utf8().
-WARN
-
-		require Encode;
-		*utf8::is_utf8 = \&Encode::is_utf8;
+	require utf8; # probably noop
+	if(not defined &utf8::is_utf8){
+		plan skip_all => "require utf8::is_utf8()";
+	}
+	else{
+		plan tests => 8;
 	}
 }
 
@@ -44,16 +42,16 @@ $q{bytes} = "\xe9\xa7\xb1\xe9\xa7\x9d"; # UTF-8 bytes
 my $foo = q{<input name="utf8" />};
 my $bar = q{<input name="bytes" />};
 
-utf8::upgrade($foo) if defined &utf8::upgrade;
-utf8::upgrade($bar) if defined &utf8::upgrade;
+utf8::upgrade($foo);
+utf8::upgrade($bar);
 
 like $o->fill(\$foo, \%q),
 	qr/\Q$q{utf8}\E/xms, "fill in utf8 with utf8";
 like $o->fill(\$bar, \%q),
 	qr/\Q$q{utf8}\E/xms, "fill in utf8 with bytes";
 
-utf8::downgrade($foo) if defined &utf8::downgrade;
-utf8::downgrade($bar) if defined &utf8::downgrade;
+utf8::downgrade($foo);
+utf8::downgrade($bar);
 
 like $o->fill(\$foo, \%q),
 	qr/$q{utf8}/xms, "fill in bytes with utf8";

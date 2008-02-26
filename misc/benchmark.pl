@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 # Usage: benchmark.pl --help
-
+use 5.006_000;
 use strict;
 use warnings;
 
