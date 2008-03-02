@@ -1,5 +1,8 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+0.10 Sun Mar  2 12:15:22 2008
+	- fixed version line in Compat.pm
+
 0.09 Sun Mar  2 11:37:55 2008
 	- improve inheritance compatibility
 		(now _get_param() is inheritable)

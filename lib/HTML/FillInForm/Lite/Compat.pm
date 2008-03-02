@@ -3,7 +3,9 @@ package HTML::FillInForm::Lite::Compat;
 use strict;
 use warnings;
 
-use HTML::FillInForm::Lite; our $VERSION = $HTML::FillInForm::Lite::VERSION;
+our $VERSION = '0.10';
+
+use HTML::FillInForm::Lite;
 our @ISA = qw(HTML::FillInForm::Lite);
 
 $INC{'HTML/FillInForm.pm'} ||= __FILE__;
