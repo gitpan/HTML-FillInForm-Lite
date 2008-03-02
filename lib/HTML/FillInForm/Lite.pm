@@ -8,7 +8,7 @@ use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.08';
+our $VERSION  = '0.09';
 
 # Regexp for HTML tags
 
@@ -47,8 +47,7 @@ my $MULTIPLE = q{(?: multiple = (?: "multiple" | 'multiple' | multiple ) )};
 
 sub new{
 	my $class = shift;
-	my $ctx = $class->_parse_option(@_);
-	return bless $ctx => $class;
+	return $class->_parse_option(@_);
 }
 
 sub _parse_option{
@@ -67,7 +66,7 @@ sub _parse_option{
 		},
 		target      => undef,
 
-		escape      => \&_escapeHTML,
+		escape      => \&_escape_html,
 	);
 
 	# merge
@@ -86,11 +85,9 @@ sub _parse_option{
 	while(my($opt, $val) = splice @_, 0, 2){
 		next unless defined $val;
 
-		if(	   $opt eq 'ignore_types'
-			or $opt eq 'ignore_fields'
+		if(	   $opt eq 'ignore_fields'
 			or $opt eq 'disable_fields'
 		){
-
 			@{ $ctx{$opt} ||= {} }{ @{$val} }
 				= (1) x @{$val};
 		}
@@ -104,10 +101,20 @@ sub _parse_option{
 			if($val){
 				$ctx{escape} = ref($val) eq 'CODE'
 					? $val
-					: \&_escapeHTML
+					: \&_escape_html;
 			}
 			else{
 				$ctx{escape} = \&_noop;
+			}
+		}
+		elsif($opt eq 'decode_entity'){
+			if($val){
+				$ctx{decode_entity} = ref($val) eq 'CODE'
+					? $val
+					: \&_decode_entity;
+			}
+			else{
+				delete $ctx{decode_entity};
 			}
 		}
 		else{
@@ -115,7 +122,7 @@ sub _parse_option{
 		}
 	}
 
-	return \%ctx;
+	return bless \%ctx => ref($self) || $self;
 }
 
 sub fill{
@@ -197,13 +204,13 @@ sub _fill_input{
 
 	### $tag
 
-	my $type  = _get_type($tag) || 'text';
-	my $name  = _get_name($tag);
+	my $type = _get_type($tag) || 'text';
+	if($ctx->{ignore_types}{ $type }){
+		return $tag;
+	}
 
-	my $values_ref = _get_param($ctx, $name, $type)
+	my $values_ref = $ctx->_get_param(_get_name($tag))
 		or return $tag;
-
-#	_disable($ctx, $name, $tag);
 
 	if($type eq 'checkbox' or $type eq 'radio'){
 		my $value = _get_value($tag);
@@ -211,7 +218,11 @@ sub _fill_input{
 		if(not defined $value){
 			$value = 'on';
 		}
-		if(grep{ $_ eq $value } @{$values_ref}){
+		elsif($ctx->{decode_entity}){
+			$value = $ctx->{decode_entity}->($value);
+		}
+
+		if(grep { $value eq $_ } @{$values_ref}){
 			$tag =~ /$CHECKED/oxmsi
 				or $tag =~ s{\s* /? > $}
 					    { checked="checked" />}xms;
@@ -232,23 +243,19 @@ sub _fill_input{
 sub _fill_select{
 	my($ctx, $tag, $content) = @_;
 
-	my $name = _get_name($tag);
-
-	my $values_ref = _get_param($ctx, $name, 'select')
+	my $values_ref = $ctx->_get_param(_get_name($tag))
 		or return $content;
 
 	if($tag !~ /$MULTIPLE/oxmsi){
 		$values_ref = [ shift @{ $values_ref } ]; # in select-one
 	}
 
-#	_disable($ctx, $name, $tag);
-
 	$content =~ s{($OPTION) (.*?) ($END_OPTION)}
-		     { _fill_option($values_ref, $1, $2) . $2 . $3 }goexsm;
+		     { _fill_option($ctx, $values_ref, $1, $2) . $2 . $3 }goexsm;
 	return $content;
 }
 sub _fill_option{
-	my($values_ref, $tag, $content) = @_;
+	my($ctx, $values_ref, $tag, $content) = @_;
 
 	my $value = _get_value($tag);
 	unless( defined $value ){
@@ -256,6 +263,10 @@ sub _fill_option{
 		$value =~ s{\A $SPACE+   } {}oxms;
 		$value =~ s{   $SPACE{2,}}{ }oxms;
 		$value =~ s{   $SPACE+ \z} {}oxms;
+	}
+
+	if($ctx->{decode_entity}){
+		$value = $ctx->{decode_entity}->($value);
 	}
 
 	### @_
@@ -273,13 +284,8 @@ sub _fill_option{
 sub _fill_textarea{
 	my($ctx, $tag, $content) = @_;
 
-	my $name = _get_name($tag);
-
-	my $values_ref = _get_param($ctx, $name, 'textarea')
+	my $values_ref = $ctx->_get_param(_get_name($tag))
 		or return $content;
-
-
-#	_disable($ctx, $name, $tag);
 
 	return $ctx->{escape}->(shift @{$values_ref});
 }
@@ -287,15 +293,14 @@ sub _fill_textarea{
 # utilities
 
 sub _get_param{
-	my($ctx, $name, $type) = @_;
+	my($ctx, $name) = @_;
+
 	return if !defined($name)
-		or $ctx->{ignore_types} {$type}
 		or $ctx->{ignore_fields}{$name};
 
 	my $ref = $ctx->{param_cache}{$name};
 
 	if(not defined $ref){
-		# fetching and other processing
 		$ref = $ctx->{param_cache}{$name}
 			= [ $ctx->{data}->param($name) ];
 
@@ -313,7 +318,7 @@ sub _get_param{
 sub _noop{
 	return $_[0];
 }
-sub _escapeHTML{
+sub _escape_html{
 	my $s = shift;
 #	return '' unless defined $s;
 
@@ -323,19 +328,19 @@ sub _escapeHTML{
 	$s =~ s/"/&quot;/g;
 	return $s;
 }
-#sub _unescapeHTML
-#{
-#	my $s = shift;
-#	return '' unless defined $s;
-#
-#	$s =~ s/&amp;/&/g;
-#	$s =~ s/&lt;/</g;
-#	$s =~ s/&gt;/>/g;
-#	$s =~ s/&quot;/"/g;
-#	$s =~ s{&#(\d+);}{chr $1}eg;
-#	$s =~ s{&#x([0-9a-fA-F]+);}{ chr hex $1}eg;
-#	return $s;
-#}
+sub _decode_entity{
+	my $s = shift;
+
+	if($s =~ /&\w+;/){
+		require HTML::Entities;
+		return HTML::Entities::decode($s);
+	}
+	else{
+		$s =~ s{&#(\d+);}{chr $1}eg;
+		$s =~ s{&#x([0-9a-fA-F]+);}{ chr hex $1}eg;
+		return $s;
+	}
+}
 
 sub _unquote{
 	$_[0] =~ /(['"]) (.*) \1/xms or return $_[0];
@@ -449,7 +454,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.08
+The document describes HTML::FillInForm version 0.09
 
 =head1 SYNOPSIS
 
@@ -523,7 +528,19 @@ html-escaped, e.g. C<< <tag> >> to be C<< &lt;tag&gt; >>.
 
 If the values are already html-escaped, set the option false.
 
-If a subroutine reference is provided, it will be used to escape the values.
+You can suply a subroutine reference to escape the values.
+
+Note that it is not implemented in C<HTML::FillInForm>.
+
+=item decode_entity => I<bool> | I<ref>
+
+If true is provided, HTML entities in state fields (namely, radio, checkbox
+and select) will be decoded. 
+
+You can also suply a subroutine reference to decode HTML entities.
+
+If there are named entities in the fields and the option is true,
+C<HTML::Entities> will be required.
 
 Note that it is not implemented in C<HTML::FillInForm>.
 
@@ -607,6 +624,8 @@ or through L<http://rt.cpan.org>.
 L<HTML::FillInForm>.
 
 L<HTML::FillInForm::Lite::JA> - the document in Japanese.
+
+L<HTML::FillInForm::Lite::Compat> - C<HTML::FillInForm> compatibility layer
 
 =head1 AUTHOR
 

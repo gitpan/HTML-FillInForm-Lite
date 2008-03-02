@@ -17,14 +17,14 @@ if(grep{ $_ eq '--help' } @ARGV){
 benchmark.pl [options..]
 
 	--file          fills in a file [DEFAULT]
-	--scalar	fills in a scalar
+	--scalar        fills in a scalar
 
 	--small         fills in only a small form [DEFAULT]
 	--large         fills in a full HTML file
 
-	--target        fills with the --target option
+	--target        fills with -target option
 
-	--class         calls fill() as a class method
+	--class         calls fill() as a class method [DEFAULT]
 	--instance      calls fill() as a instance method
 EOT
 	exit;
@@ -39,7 +39,7 @@ EOT
 
 	$start = Benchmark->new;
 	require HTML::FillInForm::Lite;
-	printf "load HTML::FillInForm::Lite (v%s):\n   %s\n",
+	printf "load HTML::FillInForm::Lite (v%s):\n   %s.\n",
 		HTML::FillInForm::Lite->VERSION,
 		Benchmark->new->timediff($start)->timestr;
 }

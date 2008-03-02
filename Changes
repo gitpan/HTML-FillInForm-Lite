@@ -1,5 +1,14 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+0.09 Sun Mar  2 11:37:55 2008
+	- improve inheritance compatibility
+		(now _get_param() is inheritable)
+	- add 'decode_entity' option
+	- add t/09decode_entity.t
+	- reform HTML::FillInForm::Lite::Compat
+	- add t/10compat.t
+	- remove 'ignore_fields' option because of its incompatibility
+
 0.08 Tue Feb 26 10:58:00 2008
 	- fixed a problem in processing 'select-one'
 	- add t/08select-extra.t

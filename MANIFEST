@@ -1,11 +1,11 @@
 Changes
 lib/HTML/FillInForm/Lite.pm
+lib/HTML/FillInForm/Lite/Compat.pm
 lib/HTML/FillInForm/Lite/JA.pod
 Makefile.PL
-MANIFEST
+MANIFEST			This list of files
 misc/benchmark.pl
 misc/demo.cgi
-misc/lib/HTML/FillInForm/Lite/Compat.pm
 misc/testform1.html
 misc/testform2.html
 README
@@ -18,7 +18,8 @@ t/05encoding.t
 t/06encoding_sjis.t
 t/07fobj.t
 t/08select-extra.t
-t/10original.t
+t/09decode_entity.t
+t/10compat.t
 t/test.html
 t/test_sjis.html
 META.yml                                 Module meta-data (added by MakeMaker)

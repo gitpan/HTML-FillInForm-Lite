@@ -1,4 +1,4 @@
-#!perl -T
+#!perl
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use FindBin qw($Bin);
 use Fatal qw(open close);
 
-use Test::More tests => 88;
+use Test::More tests => 90;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -62,21 +62,21 @@ like $o->fill(do{ open my($fh), $t or die $!; \*$fh     }, $q), $x, "in filehand
 like $o->fill(do{ open my($fh), $t or die $!;  *$fh{IO} }, $q), $x, "in IO object";
 
 use Tie::Handle;
-use Symbol qw(gensym);
+use IO::Handle;
 
 SKIP:{
 	skip "on 5.6.x", 1 if($] < 5.008);
 
 	like $o->fill(do{
-		my $fh = gensym();
+		my $fh = IO::Handle->new();
 		tie *$fh, 'Tie::StdHandle', $t or die "Cannot open '$t': $!";
 		*$fh;
 	}, $q), $x, 'in tied filehandle (*FH)';
 }
 like $o->fill(do{
-	my $fh = gensym();
+	my $fh = IO::Handle->new();
 	tie *$fh, 'Tie::StdHandle', $t or die "Cannot open '$t': $!";
-	\*$fh;
+	$fh;
 }, $q), $x, 'in tied filehandle (\*FH)';
 
 
@@ -102,10 +102,14 @@ like $o->fill(\$y, $q), $x, "hidden";
 like $o->fill(\$y, $q), qr/type="hidden"/, "remains a hidden";
 
 $y = q{<input type="submit" name="foo" value="null" />};
-is $o->fill(\$y, $q), $y, "ignore submit by default";
+is $o->fill(\$y, $q), $y, "ignore submit";
 
 $y = q{<input type="reset" name="foo" value="xxx" />};
-is $o->fill(\$y, $q), $y, "ignore reset by default";
+is $o->fill(\$y, $q), $y, "ignore reset";
+
+$y = q{<input type="button" name="foo" value="xxx" />};
+is $o->fill(\$y, $q), $y, "ignore button";
+
 
 $y = q{<input type="text" value="" />};
 is $o->fill(\$y, $q), $y, "ignore null named";
@@ -122,21 +126,9 @@ like $o->fill(\$y, $q, fill_password => 1), $x,         "fill_password => 1";
 like $o->fill(\$y, $q, fill_password => 0), $unchanged, "fill_password => 0";
 like $o->fill(\$y, $q),                     $unchanged, "options effects only the call";
 
-
-like $o->fill(\$s, $q, ignore_types   => ['text']), $unchanged, "ignore_types";
 like $o->fill(\$s, $q, ignore_fields  => ['foo']),  $unchanged, "ignore_fields";
 
 # new/fill with options
-
-like(HTML::FillInForm::Lite->fill(\$s, $q, ignore_types => ['text']),
-	$unchanged, "ignore_types with class method fill()");
-
-like(HTML::FillInForm::Lite->new(ignore_types => ['text'])->fill(\$s, $q),
-	$unchanged, "new() with ignroe_types");
-
-like(HTML::FillInForm::Lite->new(ignore_types => [])->fill(\$s, $q, ignore_types => ['text']),
-	$unchanged, "new() and fill() with ignroe_types");
-
 
 like(HTML::FillInForm::Lite->new(ignore_fields => ['foo'])
 		->fill(\$s, $q, ignore_fields => []),
@@ -304,7 +296,7 @@ $s = q{<input
 like $o->fill(\$s, $q), $x, "new lines between attributes";
 
 
-# Invalid tags
+# Invalid input fields
 
 $y = q{<a name="foo" value="" />};
 is $o->fill(\$y, $q), $y, "no inputable";
@@ -315,8 +307,18 @@ is $o->fill(\$y, $q), $y, "no space between attributes";
 $y = q{<input Hello name="foo" value="" />};
 is $o->fill(\$y, $q), $y, "rubbish in tag";
 
+$y = q{<input name="foo" value=""};
+is $o->fill(\$y, $q), $y, "unclosed tag";
 
-# no HTML
+$y = q{input name="foo" value=""/>};
+is $o->fill(\$y, $q), $y, "unopened tag";
+
+$y = q{<input name="foo' />};
+is $o->fill(\$y, $q), $y, "unmatched quote (1)";
+
+$y = q{<input name='foo" />};
+is $o->fill(\$y, $q), $y, "unmatched quote (2)";
+
 
 $y = q{name="foo" value="null"};
 is $o->fill(\$y, $q), $y, "no HTML";
@@ -332,5 +334,8 @@ my $output = $o->fill(\$s, $q);
 for(1 .. 2){
 	is $o->fill(\$output, $q), $output, "re-fill($_)";
 }
+
+is $o->fill(\$s, $q, disable_fields => ['foo']), $output,
+	"disable_fields raises no error";
 
 #END

@@ -30,6 +30,7 @@ __DATA__
 </head>
 <body>
 <h1>FillInForm Demo</h1>
+<p><a href="demo.cgi">All clear</a></p>
 <form method="get">
 <p>
 <input type="text" name="t" value="text 1" />
@@ -47,6 +48,16 @@ __DATA__
 </p>
 
 <p>
+<select name="s">
+	<option value="s1">Select1</option>
+	<option value="s2">Select2</option>
+	<option value="s3">Select3</option>
+</select>
+<select name="s">
+	<option value="s1">Select1</option>
+	<option value="s2">Select2</option>
+	<option value="s3">Select3</option>
+</select>
 <select name="s">
 	<option value="s1">Select1</option>
 	<option value="s2">Select2</option>
