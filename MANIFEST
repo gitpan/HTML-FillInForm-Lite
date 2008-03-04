@@ -6,8 +6,8 @@ Makefile.PL
 MANIFEST			This list of files
 misc/benchmark.pl
 misc/demo.cgi
-misc/testform1.html
-misc/testform2.html
+misc/testform1.tmpl
+misc/testform2.tmpl
 README
 t/00basic.t
 t/01input.t

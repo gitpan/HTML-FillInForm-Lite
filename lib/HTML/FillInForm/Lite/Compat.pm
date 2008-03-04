@@ -3,7 +3,7 @@ package HTML::FillInForm::Lite::Compat;
 use strict;
 use warnings;
 
-our $VERSION = '0.10';
+our $VERSION = '1.00';
 
 use HTML::FillInForm::Lite;
 our @ISA = qw(HTML::FillInForm::Lite);
@@ -41,11 +41,11 @@ sub fill{
 	my $source;
 	my $data;
 
-	if (defined($_[0]) and not $known_keys{ $_[0] }) {
+	if (defined $_[0] and not $known_keys{ $_[0] }) {
 		$source = shift;
 	}
 
-	if (defined($_[0]) and not $known_keys{ $_[0] }) {
+	if (defined $_[0] and not $known_keys{ $_[0] }) {
 		$data = shift;
 	}
 
@@ -63,8 +63,8 @@ sub fill{
 		unless defined $option{decode_entity};
 
 	$option{ignore_fields} = [ $option{ignore_fields} ]
-		if defined($option{ignore_fields})
-		   and ref($option{ignore_fields}) ne 'ARRAY';
+		if defined $option{ignore_fields}
+		   and ref $option{ignore_fields} ne 'ARRAY';
 
 	return $self->SUPER::fill($source, $data, %option);
 }
@@ -73,9 +73,11 @@ sub fill{
 
 __END__
 
+=encoding UTF-8
+
 =head1 NAME
 
-HTML::FillInForm::Lite::Compat - HTML::FillInForm::Lite compatibility layer
+HTML::FillInForm::Lite::Compat - HTML::FillInForm compatibility layer
 
 =head1 SYNOPSIS
 

@@ -14,11 +14,11 @@ EOT
 WriteMakefile(
 	NAME		=> 'HTML::FillInForm::Lite',
 	VERSION_FROM	=> 'lib/HTML/FillInForm/Lite.pm',
+	ABSTRACT_FROM	=> 'lib/HTML/FillInForm/Lite.pm',
+	AUTHOR		=> 'Goro Fuji <gfuji (at) cpan.org>',
+
 	PREREQ_PM	=> {
 		'Test::More' => 0,
 	},
 	LICENSE		=> 'perl',
-
-	ABSTRACT_FROM	=> 'lib/HTML/FillInForm/Lite.pm',
-	AUTHOR		=> 'Goro Fuji',
 );

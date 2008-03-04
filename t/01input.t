@@ -57,9 +57,9 @@ like $o->fill([$s], $q),  $x, "in array ref";
 like $o->fill(['', $s], $q), $x, "in array ref(2)";
 like $o->fill($t, $q), $x, "in file";
 
-like $o->fill(do{ open my($fh), $t or die $!;  *$fh     }, $q), $x, "in filehandle";
-like $o->fill(do{ open my($fh), $t or die $!; \*$fh     }, $q), $x, "in filehandle ref";
-like $o->fill(do{ open my($fh), $t or die $!;  *$fh{IO} }, $q), $x, "in IO object";
+like $o->fill(do{ open my($fh), $t;  *$fh     }, $q), $x, "in filehandle";
+like $o->fill(do{ open my($fh), $t; \*$fh     }, $q), $x, "in filehandle ref";
+like $o->fill(do{ open my($fh), $t;  *$fh{IO} }, $q), $x, "in IO object";
 
 use Tie::Handle;
 use IO::Handle;
@@ -323,7 +323,7 @@ is $o->fill(\$y, $q), $y, "unmatched quote (2)";
 $y = q{name="foo" value="null"};
 is $o->fill(\$y, $q), $y, "no HTML";
 
-# noop
+# empty source
 
 is $o->fill(\'', {}), '', "empty string";
 is $o->fill([],  {}), '', "empty array";

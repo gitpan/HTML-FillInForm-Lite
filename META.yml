@@ -1,10 +1,10 @@
 --- #YAML:1.0
 name:                HTML-FillInForm-Lite
-version:             0.10
+version:             1.00
 abstract:            Fills in HTML forms with data
 license:             perl
 author:              
-    - Goro Fuji
+    - Goro Fuji <gfuji (at) cpan.org>
 generated_by:        ExtUtils::MakeMaker version 6.42
 distribution_type:   module
 requires:     

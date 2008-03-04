@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 14;
+use Test::More tests => 15;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -13,16 +13,18 @@ my %q = (
 
 my $o = HTML::FillInForm::Lite->new();
 
-my $x = qr{<option selected="selected">\s*bar\s*</option>};
+my $x = qr{<option \s+ selected="selected"> \s*bar\s* </option>}xmsi;
 
 my $output;
 
 like $o->fill(\ qq{<select name="foo"><option>bar</option></select>}, \%q),
 	$x,
 	  	  "select an option (no white-space)";
+
 like $o->fill(\ qq{<select name='foo'><option>bar</option></select>}, \%q),
 	$x,
 	  	  "select an option (single-quoted name)";
+
 like $o->fill(\ qq{<select name=foo><option>bar</option></select>}, \%q),
 	$x,
 	  	  "select an option (unquoted name)";
@@ -48,6 +50,10 @@ is $o->fill(\ qq{<select name="foo"><option value="bar">ok</option></select>}, \
 is $o->fill(\ qq{<select name="foo"><option value="bar">ok</option><option value="baz" selected="selected">ng</option></select>}, \%q),
 	      qq{<select name="foo"><option value="bar" selected="selected">ok</option><option value="baz">ng</option></select>},
 	    	"chenge the selected";
+
+like $o->fill(\ qq{<SELECT NAME="foo"><OPTION>bar</OPTION></SELECT>}, \%q),
+	$x,
+	  	  "select an option (UPPER CASE)";
 
 # select-one / select-multi
 

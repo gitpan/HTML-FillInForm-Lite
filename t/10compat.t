@@ -3,7 +3,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 42;
+use Test::More tests => 46;
 
 use HTML::FillInForm::Lite::Compat;
 
@@ -12,15 +12,20 @@ BEGIN{ use_ok('HTML::FillInForm') }
 use CGI;
 use FindBin qw($Bin);
 
+use Fatal qw(open);
+
 my $o = HTML::FillInForm->new();
 
 isa_ok $o, 'HTML::FillInForm::Lite';
+isa_ok $o, 'HTML::FillInForm';
 
 my $file = "$Bin/test.html";
-my $s    = do{ open my($in), '<', $file or die $!; local $/; <$in> };
+my $s    = do{ open my($in), '<', $file; local $/; <$in> };
 
 my %q = (foo => 'bar');
 my $q = CGI->new(\%q);
+
+my(%fdat, $hidden_form_in, $output, $fif, $is_checked, $is_selected, $html, $result);
 
 eval{
 	HTML::FillInForm->fill();
@@ -28,7 +33,7 @@ eval{
 
 ok $@, "fill without args";
 
-my $output  = HTML::FillInForm->fill(\$s, \%q);
+$output  = HTML::FillInForm->fill(\$s, \%q);
 
 like $output, qr/value="bar"/, "simple fill()";
 
@@ -55,14 +60,15 @@ unlike $o->fill(\<<'EOT', { foo => '<bar>' }, decode_entity => 0), qr/checked/, 
 EOT
 
 SKIP:{
-	skip "require HTML::FillInForm::ForceUTF8", 2
-		unless eval{ require HTML::FillInForm::ForceUTF8; };
-	skip "require &utf8::is_utf8"
+	skip "require &utf8::is_utf8", 3
 		unless defined &utf8::is_utf8;
+	skip "require HTML::FillInForm::ForceUTF8", 3
+		unless eval{ require HTML::FillInForm::ForceUTF8; };
 
 	my $o = HTML::FillInForm::ForceUTF8->new();
 
 	isa_ok $o, 'HTML::FillInForm::Lite', "HTML::FillInForm::ForceUTF8";
+	isa_ok $o, 'HTML::FillInForm',       "HTML::FillInForm::ForceUTF8";
 
 	ok utf8::is_utf8( $o->fill(
 		scalarref => \'<input name="foo">',
@@ -71,10 +77,47 @@ SKIP:{
 }
 
 #==================================================================
-# tests from original HTML::FillInForm distribution/t/04_extra.t
+# tests from original HTML::FillInForm distribution/t/03_checkbox.t
 #==================================================================
 
-my $hidden_form_in = qq{<select multiple="multiple"  name="foo1">
+$hidden_form_in = qq{<input type="checkbox" name="foo1" value="bar1">
+<input type="checkbox" name="foo1" value="bar2">
+<input type="checkbox" name="foo1" value="bar3">
+<input type="checkbox" name="foo2" value="bar1">
+<input type="checkbox" name="foo2" value="bar2">
+<input type="checkbox" name="foo2" value="bar3">
+<input type="checkbox" name="foo3" value="bar1">
+<input type="checkbox" name="foo3" checked="checked" value="bar2">
+<input type="checkbox" name="foo3" value="bar3">
+<input type="checkbox" name="foo4" value="bar1">
+<input type="checkbox" name="foo4" checked="checked" value="bar2">
+<input type="checkbox" name="foo4" value="bar3">
+<input type="checkbox" name="foo5">
+<input type="checkbox" name="foo6">
+<input type="checkbox" name="foo7" checked="checked">
+<input type="checkbox" name="foo8" checked="checked">};
+
+%fdat = (foo1 => 'bar1',
+           foo2 => ['bar1', 'bar2',],
+	   foo3 => '',
+	   foo5 => 'on',
+	   foo6 => '',
+	   foo7 => 'on',
+	   foo8 => '');
+
+$fif = new HTML::FillInForm;
+$output = $fif->fill(scalarref => \$hidden_form_in,
+                       fdat => \%fdat);
+
+$is_checked = join(" ",map { m/checked/ ? "yes" : "no" } split ("\n",$output));
+
+is $is_checked, "yes no no yes yes no no no no no yes no yes no yes no", "checkbox.t";
+
+#==================================================================
+# tests from original HTML::FillInForm distribution/t/04_select.t
+#==================================================================
+
+$hidden_form_in = qq{<select multiple="multiple"  name="foo1">
 	<option value="0">bar1</option>
 	<option value="bar2">bar2</option>
 	<option value="bar3">bar3</option>
@@ -102,7 +145,7 @@ $q = new CGI( { foo1 => '0',
 
 $output = HTML::FillInForm->fill(\$hidden_form_in, $q);
 
-my $is_selected = join(" ",map { m/selected/ ? "yes" : "no" } grep /option/, split ("\n",$output));
+$is_selected = join(" ",map { m/selected/ ? "yes" : "no" } grep /option/, split ("\n",$output));
 
 is $is_selected, "yes no no yes yes no no no no no yes no",
 	"select test 1 from the HTML::FillInForm distribution";
@@ -133,7 +176,7 @@ $q = new CGI( { foo1 => 'bar1',
 	   foo3 => '' }
 	);
 
-my $fif = new HTML::FillInForm;
+$fif = new HTML::FillInForm;
 $output = $fif->fill(\$hidden_form_in, $q);
 
 $is_selected = join(" ",map { m/selected/ ? "yes" : "no" } grep /option/, split ("\n",$output));
@@ -156,12 +199,49 @@ like $output, qr/( selected="selected"| value="bar1"){2}/,
 	"select test 3 with empty option";
 
 
+#==================================================================
+# tests from original HTML::FillInForm distribution/t/16_ignore_fields.t
+#==================================================================
+
+$hidden_form_in = qq{<select multiple="multiple" name="foo1">
+	<option value="0">bar1</option>
+	<option value="bar2">bar2</option>
+	<option value="bar3">bar3</option>
+</select>
+<select multiple="multiple" name="foo2">
+	<option value="bar1">bar1</option>
+	<option value="bar2">bar2</option>
+	<option value="bar3">bar3</option>
+</select>
+<select multiple="multiple" name="foo3">
+	<option value="bar1">bar1</option>
+	<option selected="selected" value="bar2">bar2</option>
+	<option value="bar3">bar3</option>
+</select>
+<select multiple="multiple" name="foo4">
+	<option value="bar1">bar1</option>
+	<option selected="selected" value="bar2">bar2</option>
+	<option value="bar3">bar3</option>
+</select>};
+$q = new CGI( { foo1 => '0',
+           foo2 => ['bar1', 'bar2',],
+	   foo3 => '' }
+	);
+
+$output = HTML::FillInForm->fill(scalarref => \$hidden_form_in,
+                       fobject => $q,
+			ignore_fields => ['asdf','foo1','asdf']);
+
+$is_selected = join(" ",map { m/selected/ ? "yes" : "no" } grep /option/, split ("\n",$output));
+
+is $is_selected, "no no no yes yes no no no no no yes no", "ignore_fields.t";
+
 
 #==================================================================
 # tests from original HTML::FillInForm distribution/t/19_extra.t
 #==================================================================
 
-my $html = qq[
+$html = qq[
 <form>
 <input type="text" name="one" value="not disturbed">
 <input type="text" name="two" value="not disturbed">
@@ -169,7 +249,7 @@ my $html = qq[
 </form>
 ];
 
-my $result = HTML::FillInForm->new->fill_scalarref(
+$result = HTML::FillInForm->new->fill_scalarref(
                                          \$html,
                                          fdat => {
                                            two => "new val 2",
@@ -177,7 +257,6 @@ my $result = HTML::FillInForm->new->fill_scalarref(
                                          },
                                          ignore_fields => 'one',
                                          );
-my %fdat;
 
 like($result, qr/(?:not disturbed.+one|one.+not disturbed)/,'scalar value of ignore_fields');
 like($result, qr/(?:new val 2.+two|two.+new val 2)/,'fill_scalarref worked');

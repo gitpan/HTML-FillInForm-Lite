@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 19;
+use Test::More tests => 21;
 use FindBin qw($Bin);
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
@@ -12,7 +12,7 @@ my $s = <<'HTML';
 	<input name="bar" value="null"/>
 	</form>
 HTML
-my $x = qr/(?: \s+ (?: name="bar" | value="ok" ) ){2}/xms;
+my $x = qr/(?: \s+ (?: name="bar" | value="ok" ) ){2}/xmsi;
 
 
 like(  HTML::FillInForm::Lite->fill("$Bin/test.html", {foo => "bar"}, target => "form1"),
@@ -111,3 +111,13 @@ is $o->fill(\q{
 	<form id="foo">
 	<input name="bar" value="ok"/>
 	</form>}, "ignore different target";
+
+$s = <<'HTML';
+	<FORM ID="foo">
+	<INPUT NAME="bar" VALUE="null"/>
+	</FORM>
+HTML
+
+like   $o->fill(\$s, {bar => "ok"}, target => "foo"),     $x, "UPPER CASE(match)";
+unlike $o->fill(\$s, {bar => "ok"}, target => "not_foo"), $x, "UPPER CASE(unmatch)";
+

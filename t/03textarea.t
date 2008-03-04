@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 17;
+use Test::More tests => 18;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -18,6 +18,9 @@ my $o = HTML::FillInForm::Lite->new();
 
 is $o->fill(\qq{<textarea name="foo">xxx</textarea>}, \%q),
 	     qq{<textarea name="foo">bar</textarea>}, "fill textarea";
+
+is $o->fill(\qq{<TEXTAREA NAME="foo">xxx</TEXTAREA>}, \%q),
+	     qq{<TEXTAREA NAME="foo">bar</TEXTAREA>}, "fill textarea (UPPER CASE)";
 
 is $o->fill(\qq{<textarea name="foo"></textarea>}, \%q),
 	     qq{<textarea name="foo">bar</textarea>}, "fill empty textarea";

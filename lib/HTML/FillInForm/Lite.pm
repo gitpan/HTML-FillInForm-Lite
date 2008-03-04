@@ -8,7 +8,7 @@ use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '0.10';
+our $VERSION  = '1.00';
 
 # Regexp for HTML tags
 
@@ -17,11 +17,11 @@ my $IDENT       =  q{[a-zA-Z]+};
 my $ATTR_VALUE  =  q{(?: " [^"]* " | ' [^']* ' | [^'"/>/\s]+ )};
 my $ATTR        = qq{(?:$SPACE+ $IDENT = $ATTR_VALUE )};
 
-my $FORM     = qq{(?: <form     $ATTR+ $SPACE*>  )};
-my $INPUT    = qq{(?: <input    $ATTR+ $SPACE*/?>)};
-my $SELECT   = qq{(?: <select   $ATTR+ $SPACE* > )};
-my $OPTION   = qq{(?: <option   $ATTR* $SPACE* > )};
-my $TEXTAREA = qq{(?: <textarea $ATTR+ $SPACE* > )};
+my $FORM     = qq{(?: <form     $ATTR+ $SPACE*  > )};
+my $INPUT    = qq{(?: <input    $ATTR+ $SPACE*/?> )};
+my $SELECT   = qq{(?: <select   $ATTR+ $SPACE*  > )};
+my $OPTION   = qq{(?: <option   $ATTR* $SPACE*  > )};
+my $TEXTAREA = qq{(?: <textarea $ATTR+ $SPACE*  > )};
 
 my $END_FORM     = q{(?: </form>     )};
 my $END_SELECT   = q{(?: </select>   )};
@@ -64,30 +64,22 @@ sub _parse_option{
 			reset    => 1,
 			password => 1,
 		},
-		target      => undef,
 
 		escape      => \&_escape_html,
 	);
 
 	# merge
 	foreach my $key( ref($self) ? keys %{$self} : () ){
-		my $val = $self->{$key};
-
-		if(ref($val) eq 'HASH'){
-			@{ $ctx{$key} }{ keys %{$val} }
-				= values %{$val};
-		}
-		else{
-			$ctx{$key} = $val;
-		}
+		$ctx{$key} = ref($self->{$key}) eq 'HASH'
+			? { %{$self->{$key}} } : $self->{$key};
 	}
 
+	# parse options
 	while(my($opt, $val) = splice @_, 0, 2){
 		next unless defined $val;
 
 		if(	   $opt eq 'ignore_fields'
-			or $opt eq 'disable_fields'
-		){
+			or $opt eq 'disable_fields' ){
 			@{ $ctx{$opt} ||= {} }{ @{$val} }
 				= (1) x @{$val};
 		}
@@ -128,17 +120,12 @@ sub _parse_option{
 sub fill{
 	my($self, $src, $q, @opt) = @_;
 
-	if (not defined $src){
-		croak('No source suplied');
-	}
-	if (not defined $q){
-		croak('No data suplied');
-	}
+	defined $src or croak('No source suplied');
+	defined $q   or croak('No data suplied');
 
 	my $ctx = $self->_parse_option(@opt);
 
 	### $ctx
-
 
 	# HTML source to a scalar
 	my $content;
@@ -150,11 +137,11 @@ sub fill{
 	}
 	else{
 		if(not defined fileno $src){
-			open my($in), $src
+			open my($in), '<', $src
 				or croak("Cannot open '$src': $!");
 			$src = $in;
 		}
-		$content = do{ local $/ = undef; <$src> };
+		$content = do{ local $/; <$src> };
 	}
 	# only Perl >= 5.8.1
 	local $ctx->{utf8} = defined(&utf8::is_utf8)
@@ -209,7 +196,7 @@ sub _fill_input{
 		return $tag;
 	}
 
-	my $values_ref = $ctx->_get_param(_get_name($tag))
+	my $values_ref = $ctx->_get_param( _get_name($tag) )
 		or return $tag;
 
 	if($type eq 'checkbox' or $type eq 'radio'){
@@ -224,26 +211,26 @@ sub _fill_input{
 
 		if(grep { $value eq $_ } @{$values_ref}){
 			$tag =~ /$CHECKED/oxmsi
-				or $tag =~ s{\s* /? > $}
-					    { checked="checked" />}xms;
+				or $tag =~ s{$SPACE* /? > \z}
+					    { checked="checked" />}oxms;
 		}
 		else{
-			$tag =~ s/\s+$CHECKED//goxmsi;
+			$tag =~ s/$SPACE+$CHECKED//goxmsi;
 		}
 	}
 	else{
 		my $new_value = $ctx->{escape}->(shift @{$values_ref});
 
 		$tag =~ s{value = $ATTR_VALUE}{value="$new_value"}oxmsi
-			or $tag =~ s{\s* /? > $}
-				    { value="$new_value" />}xms;
+			or $tag =~ s{$SPACE* /? > \z}
+				    { value="$new_value" />}oxms;
 	}
 	return $tag;
 }
 sub _fill_select{
 	my($ctx, $tag, $content) = @_;
 
-	my $values_ref = $ctx->_get_param(_get_name($tag))
+	my $values_ref = $ctx->_get_param( _get_name($tag) )
 		or return $content;
 
 	if($tag !~ /$MULTIPLE/oxmsi){
@@ -251,7 +238,7 @@ sub _fill_select{
 	}
 
 	$content =~ s{($OPTION) (.*?) ($END_OPTION)}
-		     { _fill_option($ctx, $values_ref, $1, $2) . $2 . $3 }goexsm;
+		     { _fill_option($ctx, $values_ref, $1, $2) . $2 . $3 }goexmsi;
 	return $content;
 }
 sub _fill_option{
@@ -272,11 +259,11 @@ sub _fill_option{
 	### @_
 	if(grep{ $value eq $_ }  @{$values_ref}){
 		$tag =~ /$SELECTED/oxmsi
-			or $tag =~ s{ \s* > $}
-				    { selected="selected">}xms;
+			or $tag =~ s{ $SPACE* > \z}
+				    { selected="selected">}oxms;
 	}
 	else{
-		$tag =~ s/\s+$SELECTED//goxmsi;
+		$tag =~ s/$SPACE+$SELECTED//goxmsi;
 	}
 	return $tag;
 }
@@ -284,7 +271,7 @@ sub _fill_option{
 sub _fill_textarea{
 	my($ctx, $tag, $content) = @_;
 
-	my $values_ref = $ctx->_get_param(_get_name($tag))
+	my $values_ref = $ctx->_get_param( _get_name($tag) )
 		or return $content;
 
 	return $ctx->{escape}->(shift @{$values_ref});
@@ -295,8 +282,7 @@ sub _fill_textarea{
 sub _get_param{
 	my($ctx, $name) = @_;
 
-	return if !defined($name)
-		or $ctx->{ignore_fields}{$name};
+	return if not defined $name or $ctx->{ignore_fields}{$name};
 
 	my $ref = $ctx->{param_cache}{$name};
 
@@ -305,7 +291,7 @@ sub _get_param{
 			= [ $ctx->{data}->param($name) ];
 
 		if($ctx->{utf8}){
-			for my $datum( @$ref ){
+			for my $datum( @{$ref} ){
 				utf8::decode($datum)
 					unless utf8::is_utf8($datum);
 			}
@@ -336,8 +322,8 @@ sub _decode_entity{
 		return HTML::Entities::decode($s);
 	}
 	else{
-		$s =~ s{&#(\d+);}{chr $1}eg;
-		$s =~ s{&#x([0-9a-fA-F]+);}{ chr hex $1}eg;
+		$s =~ s{&\#(\d+)          ;}{ chr     $1 }egxms;
+		$s =~ s{&\#x([0-9a-fA-F]+);}{ chr hex $1 }egxms;
 		return $s;
 	}
 }
@@ -369,8 +355,8 @@ sub _get_value{
 #
 #	if($ctx->{disable_fields}{$name}){
 #		$_[0] =~ /$DISABLED/oxmsi
-#			or $_[0] =~ s{\s* /? > $}
-#				    { disabled="disabled" />}xmsi;
+#			or $_[0] =~ s{$SPACE* /? > \z}
+#				    { disabled="disabled" />}oxmsi;
 #	}
 #	return;
 #}
@@ -381,7 +367,7 @@ sub _to_form_object{
 	my $type    = ref $ref;
 
 	# Is it blessed?
-	my $blessed = $type ne ''
+	my $blessed = $type ne q{}
 			&& !!do{ local $@; eval{ $ref->can('VERSION') }};
 
 	my $wrapper;
@@ -404,7 +390,7 @@ sub _to_form_object{
 	elsif(not $blessed){
 		croak("Cannot use '$ref' as form data");
 	}
-	elsif($ref->can('param')){ # a request object e.g. CGI.pm
+	elsif($ref->can('param')){ # a request object like CGI.pm
 		return $ref;
 	}
 	else{
@@ -413,7 +399,7 @@ sub _to_form_object{
 		$type    = 'Object';
 	}
 
-	return bless $wrapper => __PACKAGE__ . '::' . $type;
+	return bless $wrapper => __PACKAGE__ . q{::} . $type;
 }
 sub HTML::FillInForm::Lite::HASH::param{
 	my($hash_ref, $key) = @_;
@@ -454,7 +440,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.10
+The document describes HTML::FillInForm::Lite version 1.00
 
 =head1 SYNOPSIS
 
@@ -466,10 +452,10 @@ The document describes HTML::FillInForm version 0.10
 
 	$output = $h->fill(\$html,    $q);
 	$output = $h->fill(\@html,    \%data);
-	$output = $h->fill(\*HTML,    \&my_param); # yes, \&my_param is ok
+	$output = $h->fill(\*HTML,    \&my_param);
 	$output = $h->fill('t.html', [$q, \%default]);
 
-	$output = $h->fill(\$html, $q,
+	$output = HTML::FillInForm::Lite->fill(\$html, $q,
 		fill_password => 0, # it is default
 		ignore_fields => ['foo', 'bar'],
 		target        => $form_id,
@@ -548,7 +534,8 @@ Note that it is not implemented in C<HTML::FillInForm>.
 
 =head2 fill(source, form_data [, options...])
 
-Fills in I<source> with I<form_data>.
+Fills in I<source> with I<form_data>. If I<souce> or I<form_data> is not
+suplied, it will cause C<die>.
 
 I<options> are the same as C<new()>'s.
 
@@ -556,13 +543,14 @@ You can use this method as a both class or instance method,
 but you make multiple calls to C<fill()> with the same
 options, it is a little faster to call C<new()> before C<fill()>.
 
-To clear all the fields, provide I<form_data> with a subroutine returning an
-empty string, like:
+If I<form_data> is a subroutine reference, it will be called in list context.
+That is, to leave some fields untouched, it must return C<()>, not C<undef>.
 
-	HTML::FillInForm::Lite->fill($source, sub{ '' });
+=head1 DEPENDENCIES
 
-I<form_data> as a subroutine is called in list context. That is, to leave
-some fields untouched, it must return C<()>, not C<undef>.
+Perl 5.6.0 or later.
+
+If you use the C<decode_entity> option, C<HTML::Entities> may be required.
 
 =head1 NOTES
 
@@ -582,7 +570,7 @@ omitted.
 For example:
 
 	<INPUT TYPE=checkbox NAME=foo CHECKED> -- NG.
-	<INPUT TYPE=checkbox NAME=foo CHECKED=CHECKED> - OK, but obsolete.
+	<INPUT TYPE=checkbox NAME=foo CHECKED=checked> - OK, but obsolete.
 	<input type="checkbox" name="foo" checked="checked" /> - OK, valid XHTML
 
 Then, it always treats the values of attributes case-sensitively.
@@ -606,7 +594,7 @@ It may cause problems. Suppose there is a code like:
 
 	<script> document.write("<input name='foo' />") </script>
 
-HTML::FillInForm will process the code to be broken:
+HTML::FillInForm::Lite will process the code to be broken:
 
 	<script> document.write("<input name='foo' value="bar" />") </script>
 
@@ -617,7 +605,7 @@ To avoid such problems, you can use the C<ignore_fields> option.
 No bugs have been reported.
 
 Please report any bug or feature request to E<lt>gfuji(at)cpan.orgE<gt>,
-or through L<http://rt.cpan.org>.
+or through L<http://rt.cpan.org/>.
 
 =head1 SEE ALSO
 
@@ -625,7 +613,7 @@ L<HTML::FillInForm>.
 
 L<HTML::FillInForm::Lite::JA> - the document in Japanese.
 
-L<HTML::FillInForm::Lite::Compat> - C<HTML::FillInForm> compatibility layer
+L<HTML::FillInForm::Lite::Compat> - HTML::FillInForm compatibility layer
 
 =head1 AUTHOR
 

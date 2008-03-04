@@ -1,5 +1,12 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+1.00 Tue Mar  4 09:25:58 2008
+	- no big feature change
+	- internal cleanup
+	- fixed a problem of capital <OPTION> tags
+	- fixed documents
+	- add '=encoding' directive to Compat.pm
+
 0.10 Sun Mar  2 12:15:22 2008
 	- fixed version line in Compat.pm
 
@@ -70,7 +77,7 @@ Revision history for Perl extension HTML::FillInForm::Lite.
 	- [IMPORTANT] fixed to html-escape when filling in textarea
 	- fixed not to incorrect html-unescape in checking values
 	- add tokenizer tests to t/00basic.t
-	- add the LIMITATIONS section to the pod
+	- add LIMITATIONS section to the pod
 
 
 0.01  Sat Dec  1 20:18:47 2007

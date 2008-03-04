@@ -6,7 +6,7 @@ HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm version 0.10
+The document describes HTML::FillInForm::Lite version 1.00
 
 =head1 SYNOPSIS
 
@@ -87,14 +87,14 @@ I<form_id>をもつフォームのみを処理対象にします。
 
 =item decode_entity => I<bool> | I<ref>
 
-このオプションにC<1>(真)を指定すると、状態を持つフィールド（つまり、radio・
-checkbox・select）の値にあるHTML実体参照がデコードされるようになります。
+このオプションにC<1>(真)を指定すると、状態を持つフィールド（つまり、radio/
+checkbox/select）の値にあるHTML実体参照がデコードされるようになります。
 
 サブルーチンリファレンスを指定すると、実体参照のデコードに
 そのサブルーチンを使います。
 
-ただし、値に名前による実体参照が含まれている場合は、そのデコードに
-C<HTML::Entities>を使います。
+値に名前による実体参照が含まれている場合は、デコードのために
+C<HTML::Entities>をロードし、それを使います。
 
 このオプションはC<HTML::FillInForm>には存在しません。
 
@@ -102,7 +102,8 @@ C<HTML::Entities>を使います。
 
 =head2 fill(source, form_data [, options...])
 
-I<souce>をI<form_data>で充填します。
+I<souce>をI<form_data>で充填します。I<souce>またはI<form_data>が渡されない場合、C<die>します。
+
 オプションはC<new()>と同じです。
 
 このメソッドはクラスメソッドとしてもインスタンスメソッドとしても
@@ -112,6 +113,12 @@ C<fill()>を同じI<options>で何度も呼び出す場合は、
 C<fill()>の前にあらかじめC<new()>でインスタンスを作っておくと少し高速になります。
 しかし、同じインスタンスにつき一度しか呼び出さないなら、インスタンスを作った
 としてもパフォーマンスは上がりません。
+
+=head1 DEPENDENCIES
+
+Perl 5.6.0以上
+
+C<deocde_entity>オプションを使う場合は、C<HTML::Entities>が必要になるかもしれません。
 
 =head1 NOTES
 
@@ -164,7 +171,7 @@ C<HTML::FillInForm::Lite>はコメントやその他の無視すべきものを�
 No bugs have been reported.
 
 Please report any bug or feature request to E<lt>gfuji(at)cpan.orgE<gt>,
-or through L<http://rt.cpan.org>.
+or through L<http://rt.cpan.org/>.
 
 =head1 SEE ALSO
 
