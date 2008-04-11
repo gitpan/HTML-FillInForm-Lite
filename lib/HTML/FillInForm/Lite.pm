@@ -8,7 +8,7 @@ use Carp qw(croak);
 
 #use Smart::Comments '####';
 
-our $VERSION  = '1.00';
+our $VERSION  = '1.01';
 
 # Regexp for HTML tags
 
@@ -63,6 +63,8 @@ sub _parse_option{
 			submit   => 1,
 			reset    => 1,
 			password => 1,
+			image    => 1,
+			file     => 1,
 		},
 
 		escape      => \&_escape_html,
@@ -440,7 +442,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm::Lite version 1.00
+The document describes HTML::FillInForm::Lite version 1.01
 
 =head1 SYNOPSIS
 

@@ -6,7 +6,7 @@ use warnings;
 use FindBin qw($Bin);
 use Fatal qw(open close);
 
-use Test::More tests => 90;
+use Test::More tests => 93;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
@@ -101,6 +101,8 @@ my $y = q{<input type="hidden" name="foo" value="baz" />};
 like $o->fill(\$y, $q), $x, "hidden";
 like $o->fill(\$y, $q), qr/type="hidden"/, "remains a hidden";
 
+# ignore_type
+
 $y = q{<input type="submit" name="foo" value="null" />};
 is $o->fill(\$y, $q), $y, "ignore submit";
 
@@ -109,6 +111,18 @@ is $o->fill(\$y, $q), $y, "ignore reset";
 
 $y = q{<input type="button" name="foo" value="xxx" />};
 is $o->fill(\$y, $q), $y, "ignore button";
+
+$y = q{<input type="image" name="foo" value="xxx" />};
+is $o->fill(\$y, $q), $y, "ignore image";
+
+$y = q{<input type="file" name="foo" value="xxx" />};
+is $o->fill(\$y, $q), $y, "ignore file";
+
+# doesn't ignore
+
+$y = q{<input type="SUBMIT" name="foo" value="xxx" />};
+like $o->fill(\$y, $q), $x, "doesn't ignore SUBMIT";
+
 
 
 $y = q{<input type="text" value="" />};
