@@ -1,14 +1,23 @@
---- #YAML:1.0
-name:                HTML-FillInForm-Lite
-version:             1.01
-abstract:            Fills in HTML forms with data
-license:             perl
-author:              
-    - Goro Fuji <gfuji (at) cpan.org>
-generated_by:        ExtUtils::MakeMaker version 6.42
-distribution_type:   module
-requires:     
-    Test::More:                    0
+---
+abstract: 'Fills in HTML forms with data'
+author:
+  - 'Goro Fuji (藤 吾郎) <gfuji(at)cpan.org>'
+distribution_type: module
+generated_by: 'Module::Install version 0.76'
+license: perl
 meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
-    version: 1.3
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: HTML-FillInForm-Lite
+no_index:
+  directory:
+    - example
+    - inc
+    - t
+recommends:
+  HTML::Entities: 1
+requires:
+  perl: 5.8.1
+resources:
+  license: http://dev.perl.org/licenses/
+version: 1.02

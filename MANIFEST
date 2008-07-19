@@ -1,13 +1,22 @@
 Changes
+example/benchmark.pl
+example/demo.cgi
+example/testform1.tmpl
+example/testform2.tmpl
+inc/Module/Install.pm
+inc/Module/Install/Base.pm
+inc/Module/Install/Can.pm
+inc/Module/Install/Fetch.pm
+inc/Module/Install/Makefile.pm
+inc/Module/Install/Metadata.pm
+inc/Module/Install/Win32.pm
+inc/Module/Install/WriteAll.pm
 lib/HTML/FillInForm/Lite.pm
 lib/HTML/FillInForm/Lite/Compat.pm
 lib/HTML/FillInForm/Lite/JA.pod
 Makefile.PL
 MANIFEST			This list of files
-misc/benchmark.pl
-misc/demo.cgi
-misc/testform1.tmpl
-misc/testform2.tmpl
+META.yml
 README
 t/00basic.t
 t/01input.t
@@ -20,6 +29,7 @@ t/07fobj.t
 t/08select-extra.t
 t/09decode_entity.t
 t/10compat.t
+t/99pod.t
+t/99podcoverage.t
 t/test.html
 t/test_sjis.html
-META.yml                                 Module meta-data (added by MakeMaker)

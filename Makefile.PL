@@ -1,24 +1,12 @@
-#!perl
+use 5.008_001;
+use inc::Module::Install;
 
-use 5.006_000;
-use ExtUtils::MakeMaker;
+name 'HTML-FillInForm-Lite';
 
-if($] == 5.008_000){
-	warn <<'EOT';
-WARNING:  Perl 5.8.0 is not recommended. If you'd like to use unicode in Perl,
-          you should upgrade Perl to 5.8.1 or later.
+all_from 'lib/HTML/FillInForm/Lite.pm';
 
-EOT
-}
+recommends 'HTML::Entities' => 1.0;
 
-WriteMakefile(
-	NAME		=> 'HTML::FillInForm::Lite',
-	VERSION_FROM	=> 'lib/HTML/FillInForm/Lite.pm',
-	ABSTRACT_FROM	=> 'lib/HTML/FillInForm/Lite.pm',
-	AUTHOR		=> 'Goro Fuji <gfuji (at) cpan.org>',
+no_index directory => 'example';
 
-	PREREQ_PM	=> {
-		'Test::More' => 0,
-	},
-	LICENSE		=> 'perl',
-);
+WriteAll;

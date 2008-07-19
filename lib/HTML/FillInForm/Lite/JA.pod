@@ -6,7 +6,7 @@ HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm::Lite version 1.01
+The document describes HTML::FillInForm::Lite version 1.02
 
 =head1 SYNOPSIS
 
@@ -116,15 +116,18 @@ C<fill()>の前にあらかじめC<new()>でインスタンスを作っておく
 
 =head1 DEPENDENCIES
 
-Perl 5.6.0以上
+Perl 5.8.1以上
 
-C<deocde_entity>オプションを使う場合は、C<HTML::Entities>が必要になるかもしれません。
+C<deocde_entity>オプションを使う場合は、C<HTML::Entities>が必要になる可能性があります。
 
 =head1 NOTES
 
 =head2 C<HTML::FillInForm>との互換性
 
 このモジュールはC<HTML::FillInForm>バージョン2の新しい構文のみ実装しています。
+
+C<HTML::FillInForm::Lite::Compat>は古い構文をサポートし，
+オプションのデフォルト値もC<HTML::FillInForm>と同じになっています。
 
 =head2 古いHTMLとの互換性
 

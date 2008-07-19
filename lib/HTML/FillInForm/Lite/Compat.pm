@@ -3,7 +3,7 @@ package HTML::FillInForm::Lite::Compat;
 use strict;
 use warnings;
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 
 use HTML::FillInForm::Lite;
 our @ISA = qw(HTML::FillInForm::Lite);
@@ -100,7 +100,25 @@ It B<takes over> the C<use HTML::FillInForm> directive to use
 C<HTML::FillInForm::Lite> instead, so that scripts and modules
 that depend on C<HTML::FillInForm> go without it.
 
+=head1 METHODS
+
+The following is compatible with those of C<HTML::FillInForm>.
+
+=over 4
+
+=item fill(...)
+
+=item fill_file(file, ...)
+
+=item fill_scalarref(scalarref, ...)
+
+=item fill_arrayref(arrayref, ...)
+
+=back
+
 =head1 SEE ALSO
+
+L<HTML::FillInForm>.
 
 L<HTML::FillInForm::Lite>.
 

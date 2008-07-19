@@ -1,14 +1,14 @@
 package HTML::FillInForm::Lite;
 
-require 5.006_000;
+use 5.008_001;
 
 use strict;
 use warnings;
-use Carp qw(croak);
+use Carp ();
 
 #use Smart::Comments '####';
 
-our $VERSION  = '1.01';
+our $VERSION  = '1.02';
 
 # Regexp for HTML tags
 
@@ -112,7 +112,7 @@ sub _parse_option{
 			}
 		}
 		else{
-			croak("Unknown option '$opt' suplied");
+			Carp::croak("Unknown option '$opt' supplied");
 		}
 	}
 
@@ -122,8 +122,8 @@ sub _parse_option{
 sub fill{
 	my($self, $src, $q, @opt) = @_;
 
-	defined $src or croak('No source suplied');
-	defined $q   or croak('No data suplied');
+	defined $src or Carp::croak('No source supplied');
+	defined $q   or Carp::croak('No data supplied');
 
 	my $ctx = $self->_parse_option(@opt);
 
@@ -140,17 +140,16 @@ sub fill{
 	else{
 		if(not defined fileno $src){
 			open my($in), '<', $src
-				or croak("Cannot open '$src': $!");
+				or Carp::croak("Cannot open '$src': $!");
 			$src = $in;
 		}
 		$content = do{ local $/; <$src> };
 	}
-	# only Perl >= 5.8.1
-	local $ctx->{utf8} = defined(&utf8::is_utf8)
-		? utf8::is_utf8($content)
-		: 0;
 
-	# Form data to an object
+	# if $content is utf8-flagged, params should be utf8-encoded
+	local $ctx->{utf8} = utf8::is_utf8($content);
+
+	# convert form data to an param object
 	local $ctx->{data} =  _to_form_object($q);
 
 	# It's not just a cache. It's needed to implement multi-text fields
@@ -390,7 +389,7 @@ sub _to_form_object{
 		$wrapper = \$ref;
 	}
 	elsif(not $blessed){
-		croak("Cannot use '$ref' as form data");
+		Carp::croak("Cannot use '$ref' as form data");
 	}
 	elsif($ref->can('param')){ # a request object like CGI.pm
 		return $ref;
@@ -442,7 +441,7 @@ HTML::FillInForm::Lite - Fills in HTML forms with data
 
 =head1 VERSION
 
-The document describes HTML::FillInForm::Lite version 1.01
+The document describes HTML::FillInForm::Lite version 1.02
 
 =head1 SYNOPSIS
 
@@ -485,10 +484,10 @@ times faster than C<HTML::FillInForm>.
 
 =head2 new(options...)
 
-Creates C<HTML::FillInForm::Lite> processer with I<options>.
+Creates C<HTML::FillInForm::Lite> processor with I<options>.
 
 There are several options. All the options are disabled when C<undef> is
-suplied.
+supplied.
 
 Acceptable options are as follows:
 
@@ -512,32 +511,32 @@ To fill in just the form identified by I<form_id>.
 =item escape => I<bool> | I<ref>
 
 If true is provided (or by default), values filled in text fields will be
-html-escaped, e.g. C<< <tag> >> to be C<< &lt;tag&gt; >>.
+HTML-escaped, e.g. C<< <tag> >> to be C<< &lt;tag&gt; >>.
 
-If the values are already html-escaped, set the option false.
+If the values are already HTML-escaped, set the option false.
 
-You can suply a subroutine reference to escape the values.
+You can supply a subroutine reference to escape the values.
 
 Note that it is not implemented in C<HTML::FillInForm>.
 
 =item decode_entity => I<bool> | I<ref>
 
 If true is provided, HTML entities in state fields (namely, radio, checkbox
-and select) will be decoded. 
+and select) will be decoded, but normally it is not needed.
 
-You can also suply a subroutine reference to decode HTML entities.
+You can also supply a subroutine reference to decode HTML entities.
 
 If there are named entities in the fields and the option is true,
 C<HTML::Entities> will be required.
 
-Note that it is not implemented in C<HTML::FillInForm>.
+Note that it is default in C<HTML::FillInForm>.
 
 =back
 
 =head2 fill(source, form_data [, options...])
 
-Fills in I<source> with I<form_data>. If I<souce> or I<form_data> is not
-suplied, it will cause C<die>.
+Fills in I<source> with I<form_data>. If I<source> or I<form_data> is not
+supplied, it will cause C<die>.
 
 I<options> are the same as C<new()>'s.
 
@@ -550,7 +549,7 @@ That is, to leave some fields untouched, it must return C<()>, not C<undef>.
 
 =head1 DEPENDENCIES
 
-Perl 5.6.0 or later.
+Perl 5.8.1 or later.
 
 If you use the C<decode_entity> option, C<HTML::Entities> may be required.
 
@@ -559,14 +558,15 @@ If you use the C<decode_entity> option, C<HTML::Entities> may be required.
 =head2 Compatibility with C<HTML::FillInForm>
 
 This module implements only the new syntax of C<HTML::FillInForm>
-version 2.
+version 2. However, C<HTML::FillInForm::Lite::Compat> provides 
+an interface compatible with C<HTML::FillInForm>.
 
 =head2 Compatibility with legacy HTML
 
 This module is designed to process XHTML 1.x.
 
 And it also supporting a good part of HTML 4.x , but there are some
-limitations. First, it doesn't understand html-attributes that the name is
+limitations. First, it doesn't understand HTML-attributes that the name is
 omitted. 
 
 For example:
@@ -578,7 +578,7 @@ For example:
 Then, it always treats the values of attributes case-sensitively.
 In the example above, the value of C<type> must be lower-case.
 
-Moreover, it doesn't recognize ommited closing tags, like:
+Moreover, it doesn't recognize omitted closing tags, like:
 
 	<select name="foo">
 		<option>bar
@@ -589,7 +589,7 @@ When you can't get what you want, try to give your source to a HTML lint.
 
 =head2 Comment handling
 
-This module processes all the processible, not knowing comments
+This module processes all the processable, not knowing comments
 nor something that shouldn't be processed.
 
 It may cause problems. Suppose there is a code like:

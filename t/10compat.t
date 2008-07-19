@@ -3,7 +3,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 46;
+use Test::More tests => 48;
 
 use HTML::FillInForm::Lite::Compat;
 
@@ -30,8 +30,17 @@ my(%fdat, $hidden_form_in, $output, $fif, $is_checked, $is_selected, $html, $res
 eval{
 	HTML::FillInForm->fill();
 };
-
 ok $@, "fill without args";
+
+eval{
+	HTML::FillInForm->fill(scalarref => \$s);
+};
+ok $@, "fill without form data";
+
+eval{
+	HTML::FillInForm->fill(fdat => \%q);
+};
+ok $@, "fill without sources";
 
 $output  = HTML::FillInForm->fill(\$s, \%q);
 
