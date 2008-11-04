@@ -3,7 +3,7 @@ package HTML::FillInForm::Lite::Compat;
 use strict;
 use warnings;
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 use HTML::FillInForm::Lite;
 our @ISA = qw(HTML::FillInForm::Lite);
@@ -22,17 +22,32 @@ my %known_keys = (
 	fill_password	=> 1,
 	ignore_fields	=> 1,
 	disable_fields	=> 1,
-
-	# additional options in Lite.pm
-	escape		=> 1,
-	decode_entity	=> 1,
 );
 
+my %extended_keys = (
+	escape        => 1,
+	decode_entity => 1,
+	layer         => 1,
+);
+
+@known_keys{keys %extended_keys} = ();
 
 BEGIN{
 	*fill_file      = \&fill;
 	*fill_arrayref  = \&fill;
 	*fill_scalarref = \&fill;
+}
+
+sub new{
+	my $class = shift;
+
+	if(@_){
+		warnings::warnif(portable =>
+			 qq{$class->new() accepts no options, }
+			. q{use HTML::FillInForm::Lite->new(...) instead});
+	}
+
+	return $class->SUPER::new();
 }
 
 sub fill{
@@ -41,15 +56,21 @@ sub fill{
 	my $source;
 	my $data;
 
-	if (defined $_[0] and not $known_keys{ $_[0] }) {
+	if (defined $_[0] and not exists $known_keys{ $_[0] }){
 		$source = shift;
 	}
 
-	if (defined $_[0] and not $known_keys{ $_[0] }) {
+	if (defined $_[0] and not exists $known_keys{ $_[0] }){
 		$data = shift;
 	}
 
 	my %option = @_;
+
+	foreach my $key(keys %option){
+		if(exists $extended_keys{$key}){
+			warnings::warnif(portable => qq{HTML::FillInForm::Lite-specific option "$key" supplied});
+		}
+	}
 
 	$source ||= $option{file} || $option{scalarref} || $option{arrayref};
 	$data   ||= $option{fdat} || $option{fobject};
@@ -105,6 +126,10 @@ that depend on C<HTML::FillInForm> go without it.
 The following is compatible with those of C<HTML::FillInForm>.
 
 =over 4
+
+=item new()
+
+It accepts no options as C<HTML::FillInForm> does.
 
 =item fill(...)
 

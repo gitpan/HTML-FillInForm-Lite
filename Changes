@@ -1,5 +1,10 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+1.03 Fri Oct 17 18:45:28 2008
+	- add 'layer' option for input PerlIO layers
+	- remove HTML::Entities dependency
+	- change HTML::FillInForm::Lite::Compat to warn incompatible options
+
 1.02 Sat Jul 19 15:50:41 2008
 	- add pod tests
 	- require 5.8.1 or later to make code simpler

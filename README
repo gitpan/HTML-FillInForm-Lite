@@ -14,7 +14,7 @@ DESCRIPTION
 
 	HTML::FillInForm::Lite fills in HTML forms with Perl data,
 	as HTML::FillInForm does, but it's faster than HTML::FillInForm.
-	(To benchmark this module, you can run "perl -Ilib misc/benchmark.pl")
+	(To benchmark this module, you can run "perl -Ilib example/benchmark.pl")
 
 
 	See "perldoc HTML::FillInForm::Lite" for the rest of the document.

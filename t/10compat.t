@@ -3,7 +3,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 48;
+use Test::More tests => 50;
 
 use HTML::FillInForm::Lite::Compat;
 
@@ -13,6 +13,19 @@ use CGI;
 use FindBin qw($Bin);
 
 use Fatal qw(open);
+
+{
+	use warnings FATAL => 'portable';
+	eval{
+		HTML::FillInForm->new(escape => 0);
+	};
+	like $@, qr/HTML::FillInForm->new\(\) accepts no options/;
+
+	eval{
+		HTML::FillInForm->fill(escape => 0);
+	};
+	like $@, qr/HTML::FillInForm::Lite-specific option/;
+}
 
 my $o = HTML::FillInForm->new();
 
@@ -64,9 +77,12 @@ like $o->fill(\<<'EOT', { foo => '<bar>' }), qr/checked/, "decode entities by de
 <input type="radio" value="&#60;bar&#62;" name="foo" />
 EOT
 
-unlike $o->fill(\<<'EOT', { foo => '<bar>' }, decode_entity => 0), qr/checked/, "decode_entity => 0";
-<input type="radio" value="&#60;bar&#62;" name="foo" />
+{
+	no warnings 'portable';
+	unlike $o->fill(\<<'EOT', { foo => '<bar>' }, decode_entity => 0), qr/checked/, "decode_entity => 0";
+	<input type="radio" value="&#60;bar&#62;" name="foo" />
 EOT
+}
 
 SKIP:{
 	skip "require &utf8::is_utf8", 3

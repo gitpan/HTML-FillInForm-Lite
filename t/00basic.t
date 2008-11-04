@@ -2,58 +2,58 @@
 
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 33;
+use Test::More tests => 12;
 
 BEGIN{ use_ok('HTML::FillInForm::Lite'); }
 
-BEGIN{
-	# import utilities
-
-	no strict 'refs';
-	foreach my $f(qw(get_name get_type get_id get_value)){
-		*$f = \&{'HTML::FillInForm::Lite::_' . $f};
-	}
-}
+#BEGIN{
+#	# import utilities
+#
+#	no strict 'refs';
+#	foreach my $f(qw(get_name get_type get_id get_value)){
+#		*$f = \&{'HTML::FillInForm::Lite::_' . $f};
+#	}
+#}
 
 
 my $s = q{<input type="text" name="foo" value="bar" id="baz" />};
 
-is get_type($s), "text", "(1)_get_type()";
-is get_name($s), "foo",  "(1)_get_name()";
-is get_id  ($s), "baz",  "(1)_get_id()";
-is get_value($s),"bar",  "(1)_get_value()";
+#is get_type($s), "text", "(1)_get_type()";
+#is get_name($s), "foo",  "(1)_get_name()";
+#is get_id  ($s), "baz",  "(1)_get_id()";
+#is get_value($s),"bar",  "(1)_get_value()";
 
 $s = q{<input type='text' name='foo' value='bar' id='baz' />};
 
-is get_type($s), "text", "(2)_get_type()";
-is get_name($s), "foo",  "(2)_get_name()";
-is get_id  ($s), "baz",  "(2)_get_id()";
-is get_value($s),"bar",  "(2)_get_value()";
+#is get_type($s), "text", "(2)_get_type()";
+#is get_name($s), "foo",  "(2)_get_name()";
+#is get_id  ($s), "baz",  "(2)_get_id()";
+#is get_value($s),"bar",  "(2)_get_value()";
 
 $s =~ s/\s+/\n/g;
 
-is get_type($s), "text", "(3)_get_type()";
-is get_name($s), "foo",  "(3)_get_name()";
-is get_id  ($s), "baz",  "(3)_get_id()";
-is get_value($s),"bar",  "(3)_get_value()";
+#is get_type($s), "text", "(3)_get_type()";
+#is get_name($s), "foo",  "(3)_get_name()";
+#is get_id  ($s), "baz",  "(3)_get_id()";
+#is get_value($s),"bar",  "(3)_get_value()";
 
 $s = q{<INPUT TYPE="text" NAME="foo" VALUE="bar" ID=baz"/>};
 
-is get_type($s), "text", "(4)_get_type()";
-is get_name($s), "foo",  "(4)_get_name()";
-is get_id  ($s), "baz",  "(4)_get_id()";
-is get_value($s),"bar",  "(4)_get_value()";
+#is get_type($s), "text", "(4)_get_type()";
+#is get_name($s), "foo",  "(4)_get_name()";
+#is get_id  ($s), "baz",  "(4)_get_id()";
+#is get_value($s),"bar",  "(4)_get_value()";
 
 $s = q{<input type=text name=foo value=bar id=baz />};
 
-is get_type($s), "text", "(5)_get_type()";
-is get_name($s), "foo",  "(5)_get_name()";
-is get_id  ($s), "baz",  "(5)_get_id()";
-is get_value($s),"bar",  "(5)_get_value()";
+#is get_type($s), "text", "(5)_get_type()";
+#is get_name($s), "foo",  "(5)_get_name()";
+#is get_id  ($s), "baz",  "(5)_get_id()";
+#is get_value($s),"bar",  "(5)_get_value()";
 
 $s = q{<input value="&lt;&gt;" />};
 
-is get_value($s), '&lt;&gt;', "get raw data";
+#is get_value($s), '&lt;&gt;', "get raw data";
 
 
 eval{

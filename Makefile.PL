@@ -1,12 +1,16 @@
 use 5.008_001;
+use strict;
 use inc::Module::Install;
 
 name 'HTML-FillInForm-Lite';
 
 all_from 'lib/HTML/FillInForm/Lite.pm';
 
-recommends 'HTML::Entities' => 1.0;
+test_requires 'Test::More' => 0.62;
 
-no_index directory => 'example';
+#build_requires 'macro' => 0.04;
+#pmc_support;
 
-WriteAll;
+WriteMakefile(
+	clean => {FILES => 'HTML-FillInForm-Lite-* cover_db'},
+);

@@ -13,11 +13,11 @@ BEGIN{
 		plan tests => 4;
 	}
 }
+
 use encoding 'Shift_JIS';
 
 BEGIN{ use_ok('HTML::FillInForm::Lite') }
 
-use Fatal qw(open close);
 use FindBin qw($Bin);
 my $file = "$Bin/test_sjis.html";
 
@@ -26,21 +26,11 @@ my $o = HTML::FillInForm::Lite->new();
 my $u1  = "\xe9p\xe9k";         # "camel" in Japanese kanji    (Shift_JIS)
 my $u2  = "\x83\x89\x83N\x83_"; # "camel" in Japanese katakana (Shift_JIS)
 
-my $x = qr{value="$u1"};
+like $o->fill($file, { camel => $u1 }, layer => ':encoding(Shift_JIS)'),
+	qr{name="camel" \s+ value="$u1"}xms, "Unicode value";
 
-my $in;
-open $in, '<:encoding(Shift_JIS)',  $file;
-like $o->fill($in,
-	{ camel => $u1 }), qr{name="camel" \s+ value="$u1"}xms,
-	"Unicode value";
+like $o->fill($file, { $u2 => 'camel' }, layer => ':encoding(Shift_JIS)'),
+	qr{name="$u2" \s+ value="camel"}xms, "Unicode name";
 
-open $in, '<:encoding(Shift_JIS)',  $file;
-like $o->fill($in,
-	{ $u2 => 'camel' }), qr{name="$u2" \s+ value="camel"}xms,
-	"Unicode name";
-
-open $in, '<:encoding(Shift_JIS)',  $file;
-like $o->fill($in, { $u2 => $u1 }),
-	$x, "Unicode name/value";
-
-close($in);
+like $o->fill($file, { $u2 => $u1 }, layer => ':encoding(Shift_JIS)'),
+	qr{value="$u1"}, "Unicode name/value";

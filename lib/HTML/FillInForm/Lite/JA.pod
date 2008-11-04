@@ -6,7 +6,7 @@ HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm::Lite version 1.02
+The document describes HTML::FillInForm::Lite version 1.03
 
 =head1 SYNOPSIS
 
@@ -87,16 +87,31 @@ I<form_id>をもつフォームのみを処理対象にします。
 
 =item decode_entity => I<bool> | I<ref>
 
-このオプションにC<1>(真)を指定すると、状態を持つフィールド（つまり、radio/
-checkbox/select）の値にあるHTML実体参照がデコードされるようになります。
+このオプションにC<1>(真)を指定した場合、状態を持つフィールド
+（つまり、radio/checkbox/select）の値にあるHTML実体参照がデコードされます。
+しかし，通常はこのオプションは必要ありません。
 
 サブルーチンリファレンスを指定すると、実体参照のデコードに
 そのサブルーチンを使います。
 
-値に名前による実体参照が含まれている場合は、デコードのために
-C<HTML::Entities>をロードし、それを使います。
+C<HTML::FillInForm>は自動的に状態フィールドのHTML実体参照をデコードしますが，
+このオプションそれ自体は存在しません。
 
-このオプションはC<HTML::FillInForm>には存在しません。
+=item layer => I<:iolayer>
+
+ファイルを読み込むときにI<:iolayer>を指定するようにします。
+これはソースとしてファイル名が渡されたときに使われます。
+
+使用例：
+
+	# UTF-8でエンコードされたファイルを読むとき
+	$fif = HTML::FillInForm::Lite->new(layer => ':utf8');
+	$output = $fif->fill($file, $fdat);
+
+	# EUC-JPでエンコードされたファイルを読むとき
+	$fif = HTML::FillInForm::Lite->new(layer => ':encoding(euc-jp)');
+	$output = $fif->fill($file, $fdat);
+
 
 =back
 
@@ -109,16 +124,24 @@ I<souce>をI<form_data>で充填します。I<souce>またはI<form_data>が渡�
 このメソッドはクラスメソッドとしてもインスタンスメソッドとしても
 呼び出せます。
 
-C<fill()>を同じI<options>で何度も呼び出す場合は、
+C<fill()>をB<同じ>I<options>で何度も呼び出す場合は、
 C<fill()>の前にあらかじめC<new()>でインスタンスを作っておくと少し高速になります。
 しかし、同じインスタンスにつき一度しか呼び出さないなら、インスタンスを作った
 としてもパフォーマンスは上がりません。
 
+I<sorce>としては，スカラーリファレンスか文字列の配列リファレンス，
+ファイル名を渡すことが出来ます。
+
+I<form_data>としては，ハッシュリファレンスかC<param()>メソッドを持つ
+オブジェクト，アクセサを持つオブジェクト，前述のいずれかからなる
+配列リファレンスを渡すことが出来ます。
+
+I<form_data>が手続きに基づくもの（つまりハッシュリファレンス以外のケース）では，
+その手続きはリストコンテキストで呼ばれます。したがって，フィールドに手を付けたくない場合，C<undef>ではなく空リストC<()>を返さなければいけません。
+
 =head1 DEPENDENCIES
 
 Perl 5.8.1以上
-
-C<deocde_entity>オプションを使う場合は、C<HTML::Entities>が必要になる可能性があります。
 
 =head1 NOTES
 
@@ -126,7 +149,7 @@ C<deocde_entity>オプションを使う場合は、C<HTML::Entities>が必要�
 
 このモジュールはC<HTML::FillInForm>バージョン2の新しい構文のみ実装しています。
 
-C<HTML::FillInForm::Lite::Compat>は古い構文をサポートし，
+C<HTML::FillInForm::Lite::Compat>はC<HTML::FillInForm>バージョン1の構文をサポートし，
 オプションのデフォルト値もC<HTML::FillInForm>と同じになっています。
 
 =head2 古いHTMLとの互換性
@@ -145,7 +168,7 @@ HTML4.xの大部分もサポートはしていますが、一部制限があり�
 さらに、このモジュールは常に属性値の大文字・小文字を区別します。
 上記の例では、C<type>属性の値は小文字でなければなりません。
 
-さらに、閉じタグは省略できません。たとえば以下のようなコードは無視します。
+さらに、閉じタグは省略できません。たとえば以下のようなコードは単に無視します。
 
 	<select name="foo">
 		<option>bar
@@ -174,7 +197,7 @@ C<HTML::FillInForm::Lite>はコメントやその他の無視すべきものを�
 No bugs have been reported.
 
 Please report any bug or feature request to E<lt>gfuji(at)cpan.orgE<gt>,
-or through L<http://rt.cpan.org/>.
+or through thr RT L<http://rt.cpan.org/>.
 
 =head1 SEE ALSO
 
