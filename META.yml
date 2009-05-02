@@ -1,13 +1,14 @@
 ---
-abstract: 'Fills in HTML forms with data'
+abstract: 'Lightweight FillInForm module in Pure Perl'
 author:
   - 'Goro Fuji (藤 吾郎) <gfuji(at)cpan.org>'
 build_requires:
+  ExtUtils::MakeMaker: 6.42
   Test::More: 0.62
 configure_requires:
-  ExtUtils::MakeMaker: 6.44
+  ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 0.77'
+generated_by: 'Module::Install version 0.84'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -21,4 +22,4 @@ requires:
   perl: 5.8.1
 resources:
   license: http://dev.perl.org/licenses/
-version: 1.03
+version: 1.04

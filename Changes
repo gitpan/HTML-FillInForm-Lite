@@ -1,5 +1,8 @@
 Revision history for Perl extension HTML::FillInForm::Lite.
 
+1.04 Sat May  2 15:39:35 2009
+	- not to add extra '/' to the end of <input> to be compatible with HTML 4
+
 1.03 Fri Oct 17 18:45:28 2008
 	- add 'layer' option for input PerlIO layers
 	- remove HTML::Entities dependency
@@ -12,7 +15,7 @@ Revision history for Perl extension HTML::FillInForm::Lite.
 	- fix typo in pods
 
 1.01 Thu Apr 10 15:59:13 2008
-	- add "image" and "file" to ignore_types
+	- add "image" and "file" to default ignore_types
 
 1.00 Tue Mar  4 09:25:58 2008
 	- no big feature change

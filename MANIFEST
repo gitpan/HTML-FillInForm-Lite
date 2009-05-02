@@ -29,6 +29,7 @@ t/07fobj.t
 t/08select-extra.t
 t/09decode_entity.t
 t/10compat.t
+t/11html4compat.t
 t/99pod.t
 t/99podcoverage.t
 t/test.html

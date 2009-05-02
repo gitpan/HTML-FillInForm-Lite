@@ -8,7 +8,7 @@ use Carp ();
 
 #use Smart::Comments '####';
 
-our $VERSION  = '1.03';
+our $VERSION  = '1.04';
 
 # Regexp for HTML tags
 
@@ -82,7 +82,7 @@ sub _parse_option{
 		return $self;
 	}
 
-	my %ctx = (
+	my %context = (
 		ignore_types => {
 			button   => 1,
 			submit   => 1,
@@ -98,9 +98,10 @@ sub _parse_option{
 	);
 
 	# merge if needed
-	foreach my $key( ref($self) ? keys %{$self} : () ){
-		$ctx{$key} = ref($self->{$key}) eq 'HASH'
-			? { %{$self->{$key}} } : $self->{$key};
+	if(ref $self){
+		while(my($key, $val) = each %{$self}){
+			$context{$key} = ref($val) eq 'HASH' ? { %{$val} } : $val;
+		}
 	}
 
 	# parse options
@@ -109,36 +110,36 @@ sub _parse_option{
 
 		if(	   $opt eq 'ignore_fields'
 			or $opt eq 'disable_fields' ){
-			@{ $ctx{$opt} ||= {} }{ @{$val} }
+			@{ $context{$opt} ||= {} }{ @{$val} }
 				= (1) x @{$val};
 		}
 		elsif($opt eq 'fill_password'){
-			$ctx{ignore_types}{password} = !$val;
+			$context{ignore_types}{password} = !$val;
 		}
 		elsif($opt eq 'target'){
-			$ctx{target} = $val;
+			$context{target} = $val;
 		}
 		elsif($opt eq 'escape'){
 			if($val){
-				$ctx{escape} = ref($val) eq 'CODE'
+				$context{escape} = ref($val) eq 'CODE'
 					? $val
 					: \&_escape_html;
 			}
 			else{
-				$ctx{escape} = \&_noop;
+				$context{escape} = \&_noop;
 			}
 		}
 		elsif($opt eq 'layer'){
-			$ctx{layer} = $val;
+			$context{layer} = $val;
 		}
 		elsif($opt eq 'decode_entity'){
 			if($val){
-				$ctx{decode_entity} = ref($val) eq 'CODE'
+				$context{decode_entity} = ref($val) eq 'CODE'
 					? $val
 					: \&_decode_entity;
 			}
 			else{
-				$ctx{decode_entity} = \&_noop;
+				$context{decode_entity} = \&_noop;
 			}
 		}
 		else{
@@ -146,7 +147,7 @@ sub _parse_option{
 		}
 	}
 
-	return bless \%ctx => ref($self) || $self;
+	return bless \%context => ref($self) || $self;
 }
 
 sub fill :method{
@@ -155,83 +156,84 @@ sub fill :method{
 	defined $src or Carp::croak('No source supplied');
 	defined $q   or Carp::croak('No data supplied');
 
-	my $ctx = $self->_parse_option(@opt);
+	my $context = $self->_parse_option(@opt);
 
-	### $ctx
+	### $context
 
 	# HTML source to a scalar
 	my $content;
 	if(ref($src) eq 'SCALAR'){
-		$content = ${$src};
+		$content = ${$src}; # copy
 	}
 	elsif(ref($src) eq 'ARRAY'){
 		$content = join q{}, @{$src};
 	}
 	else{
-		if(not defined fileno $src){
-			open my($in), '<'.$ctx->{layer}, $src
+		if(not defined fileno $src){ # opened filehandle?
+			open my($in), '<'.$context->{layer}, $src
 				or Carp::croak("Cannot open '$src': $!");
 			$src = $in;
 		}
-		$content = do{ local $/; <$src> }; # slurp
+		local $/;
+		$content = readline($src); # slurp
 	}
 
 	# if $content is utf8-flagged, params should be utf8-encoded
-	local $ctx->{utf8} = utf8::is_utf8($content);
+	local $context->{utf8} = utf8::is_utf8($content);
 
-	# convert form data to an param object
-	local $ctx->{data} =  _to_form_object($q);
+	# param object converted from data or object
+	local $context->{data} =  _to_form_object($q);
 
-	# It's not just a cache. It's needed to implement multi-text fields
-	local $ctx->{param_cache} = {};
+	# param storage for multi-text fields
+	local $context->{params} = {};
 
 	# Fill in contents
-	if(defined $ctx->{target}){
+	if(defined $context->{target}){
 
 		$content =~ s{ ($FORM) (.*?) ($END_FORM) }
 		             {
 				my($beg, $content, $end) = ($1, $2, $3);
 
 				my $id = _get_id($beg);
-				(defined($id) and $ctx->{target} eq $id)
-					? $beg . _fill($ctx, $content) . $end
-					: $beg .             $content  . $end
-			     }goexmsi;
+				(defined($id) and $context->{target} eq $id)
+					? $beg . _fill($context, $content) . $end
+					: $beg .                 $content  . $end
+		}goexmsi;
 
 		return $content;
 	}
 	else{
-		return _fill($ctx, $content);
+		return _fill($context, $content);
 	}
 
 }
 
 sub _fill{
-	my($ctx, $content) = @_;
+	my($context, $content) = @_;
 	$content =~ s{($INPUT)}
-		     { _fill_input($ctx, $1)                  }goexmsi;
+		     { _fill_input($context, $1)                  }goexmsi;
 
 	$content =~ s{($SELECT) (.*?) ($END_SELECT) }
-		     { $1 . _fill_select($ctx, $1, $2) . $3   }goexmsi;
+		     { $1 . _fill_select($context, $1, $2) . $3   }goexmsi;
 
 	$content =~ s{($TEXTAREA) (.*?) ($END_TEXTAREA) }
-		     { $1 . _fill_textarea($ctx, $1, $2) . $3 }goexmsi;
+		     { $1 . _fill_textarea($context, $1, $2) . $3 }goexmsi;
 
 	return $content;
 }
 
 
 sub _fill_input{
-	my($ctx, $tag) = @_;
+	my($context, $tag) = @_;
 
 	### $tag
 
 	my $type = _get_type($tag) || 'text';
-	if($ctx->{ignore_types}{ $type }){
+	if($context->{ignore_types}{ $type }){
 		return $tag;
 	}
 
-	my $values_ref = $ctx->_get_param( _get_name($tag) )
+	my $values_ref = $context->_get_param( _get_name($tag) )
 		or return $tag;
 
 	if($type eq 'checkbox' or $type eq 'radio'){
@@ -241,31 +243,31 @@ sub _fill_input{
 			$value = 'on';
 		}
 		else{
-			$value = $ctx->{decode_entity}->($value);
+			$value = $context->{decode_entity}->($value);
 		}
 
 		if(grep { $value eq $_ } @{$values_ref}){
 			$tag =~ /$CHECKED/oxmsi
-				or $tag =~ s{$SPACE* /? > \z}
-					    { checked="checked" />}oxms;
+				or $tag =~ s{$SPACE* (/?) > \z}
+					    { checked="checked" $1>}oxms;
 		}
 		else{
 			$tag =~ s/$SPACE+$CHECKED//goxmsi;
 		}
 	}
 	else{
-		my $new_value = $ctx->{escape}->(shift @{$values_ref});
+		my $new_value = $context->{escape}->(shift @{$values_ref});
 
 		$tag =~ s{value = $ATTR_VALUE}{value="$new_value"}oxmsi
-			or $tag =~ s{$SPACE* /? > \z}
-				    { value="$new_value" />}oxms;
+			or $tag =~ s{$SPACE* (/?) > \z}
+				    { value="$new_value" $1>}oxms;
 	}
 	return $tag;
 }
 sub _fill_select{
-	my($ctx, $tag, $content) = @_;
+	my($context, $tag, $content) = @_;
 
-	my $values_ref = $ctx->_get_param( _get_name($tag) )
+	my $values_ref = $context->_get_param( _get_name($tag) )
 		or return $content;
 
 	if($tag !~ /$MULTIPLE/oxmsi){
@@ -273,11 +275,11 @@ sub _fill_select{
 	}
 
 	$content =~ s{($OPTION) (.*?) ($END_OPTION)}
-		     { _fill_option($ctx, $values_ref, $1, $2) . $2 . $3 }goexmsi;
+		     { _fill_option($context, $values_ref, $1, $2) . $2 . $3 }goexmsi;
 	return $content;
 }
 sub _fill_option{
-	my($ctx, $values_ref, $tag, $content) = @_;
+	my($context, $values_ref, $tag, $content) = @_;
 
 	my $value = _get_value($tag);
 	unless( defined $value ){
@@ -287,7 +289,7 @@ sub _fill_option{
 		$value =~ s{   $SPACE+ \z} {}oxms;
 	}
 
-	$value = $ctx->{decode_entity}->($value);
+	$value = $context->{decode_entity}->($value);
 
 	### @_
 	if(grep{ $value eq $_ }  @{$values_ref}){
@@ -302,28 +304,28 @@ sub _fill_option{
 }
 
 sub _fill_textarea{
-	my($ctx, $tag, $content) = @_;
+	my($context, $tag, $content) = @_;
 
-	my $values_ref = $ctx->_get_param( _get_name($tag) )
+	my $values_ref = $context->_get_param( _get_name($tag) )
 		or return $content;
 
-	return $ctx->{escape}->(shift @{$values_ref});
+	return $context->{escape}->(shift @{$values_ref});
 }
 
 # utilities
 
 sub _get_param{
-	my($ctx, $name) = @_;
+	my($context, $name) = @_;
 
-	return if not defined $name or $ctx->{ignore_fields}{$name};
+	return if not defined $name or $context->{ignore_fields}{$name};
 
-	my $ref = $ctx->{param_cache}{$name};
+	my $ref = $context->{params}{$name};
 
 	if(not defined $ref){
-		$ref = $ctx->{param_cache}{$name}
-			= [ $ctx->{data}->param($name) ];
+		$ref = $context->{params}{$name}
+			= [ $context->{data}->param($name) ];
 
-		if($ctx->{utf8}){
+		if($context->{utf8}){
 			for my $datum( @{$ref} ){
 				utf8::decode($datum) unless utf8::is_utf8($datum);
 			}
@@ -358,7 +360,7 @@ sub _decode_entity{
 		local($@, $!);
 		open my $data_in, '<', __FILE__ or die $!; # should be success
 		readline $data_in; # discard the first segment
-		eval scalar <$data_in> or die $@;
+		eval scalar readline($data_in) or die $@;
 	}
 
 	$s =~ s{&(\w+);}{ $entity2char{$1} || "&$1;" }egxms;
@@ -369,10 +371,10 @@ sub _decode_entity{
 }
 
 #sub _disable{
-#	my $ctx = shift;
+#	my $context = shift;
 #	my $name   = shift;
 #
-#	if($ctx->{disable_fields}{$name}){
+#	if($context->{disable_fields}{$name}){
 #		$_[0] =~ /$DISABLED/oxmsi
 #			or $_[0] =~ s{$SPACE* /? > \z}
 #				    { disabled="disabled" />}oxmsi;
@@ -383,31 +385,33 @@ sub _decode_entity{
 sub _to_form_object{
 	my($ref) = @_;
 
-	my $type    = ref $ref;
+	my $type = ref $ref;
 
 	# Is it blessed?
 	my $blessed = $type ne q{}
-			&& !!do{ local $@; eval{ $ref->can('VERSION') }};
+			&& !!do{ local $@; eval{ $ref->VERSION;1 } };
 
 	my $wrapper;
-	if($type eq 'HASH'){
-		$wrapper = {};
-		@{$wrapper}{ keys %{$ref} }
-			= map{
-				ref($_) eq 'ARRAY' ?  $_  :
-				defined($_)        ? [$_] :
-						      ();
-			} values %{$ref};
-	}
-	elsif($type eq 'ARRAY'){
-		$wrapper = [];
-		@{$wrapper} = map{ _to_form_object($_) } @{$ref};
-	}
-	elsif($type eq 'CODE'){
-		$wrapper = \$ref;
-	}
-	elsif(not $blessed){
-		Carp::croak("Cannot use '$ref' as form data");
+	if(not $blessed){
+		if($type eq 'HASH'){
+			$wrapper = {};
+			@{$wrapper}{ keys %{$ref} }
+				= map{
+					ref($_) eq 'ARRAY' ?  $_  :
+					defined($_)        ? [$_] :
+							      ();
+				} values %{$ref};
+		}
+		elsif($type eq 'ARRAY'){
+			$wrapper = [];
+			@{$wrapper} = map{ _to_form_object($_) } @{$ref};
+		}
+		elsif($type eq 'CODE'){
+			$wrapper = \$ref;
+		}
+		else{
+			Carp::croak("Cannot use '$ref' as form data");
+		}
 	}
 	elsif($ref->can('param')){ # a request object like CGI.pm
 		return $ref;
@@ -441,7 +445,7 @@ sub HTML::FillInForm::Lite::CODE::param{
 }
 sub HTML::FillInForm::Lite::Object::param{
 	my($ref_to_object, $key) = @_;
-	my $method = ${$ref_to_object}->can($key)  or return ();
+	my $method = ${$ref_to_object}->can($key)  or return;
 	my(@values) = ${$ref_to_object}->$method();
 
 	return @values == 1 && !defined($values[0]) ? () : @values;
@@ -592,15 +596,15 @@ our %entity2char = (
 
 __END__
 
-=encoding UTF-8
+=encoding utf-8
 
 =head1 NAME
 
-HTML::FillInForm::Lite - Fills in HTML forms with data
+HTML::FillInForm::Lite - Lightweight FillInForm module in Pure Perl
 
 =head1 VERSION
 
-The document describes HTML::FillInForm::Lite version 1.03
+The document describes HTML::FillInForm::Lite version 1.04
 
 =head1 SYNOPSIS
 
@@ -615,6 +619,7 @@ The document describes HTML::FillInForm::Lite version 1.03
 	$output = $h->fill(\*HTML,    \&my_param);
 	$output = $h->fill('t.html', [$q, \%default]);
 
+	# or as a class method with options
 	$output = HTML::FillInForm::Lite->fill(\$html, $q,
 		fill_password => 0, # it is default
 		ignore_fields => ['foo', 'bar'],
@@ -698,11 +703,11 @@ For example:
 
 	# To read a file encoded in UTF-8
 	$fif = HTML::FillInForm::Lite->new(layer => ':utf8');
-	$output = $fif->fill($file, $fdat);
+	$output = $fif->fill($utf8_file, $fdat);
 
 	# To read a file encoded in EUC-JP
 	$fif = HTML::FillInForm::Lite->new(layer => ':encoding(euc-jp)');
-	$output = $fif->fill($file, $fdat);
+	$output = $fif->fill($eucjp_file, $fdat);
 
 Note that it is not implemented in C<HTML::FillInForm>.
 
@@ -805,7 +810,7 @@ Goro Fuji (藤 吾郎) E<lt>gfuji(at)cpan.orgE<gt>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2008 Goro Fuji, Some rights reserved.
+Copyright (c) 2008-2009 Goro Fuji, Some rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

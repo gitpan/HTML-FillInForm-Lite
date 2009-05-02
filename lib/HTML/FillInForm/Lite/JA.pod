@@ -1,4 +1,5 @@
-=encoding UTF-8
+
+=encoding utf-8
 
 =head1 NAME
 
@@ -6,7 +7,7 @@ HTML::FillInForm::Lite::JA - HTMLフォームにデータを充填する
 
 =head1 VERSION
 
-The document describes HTML::FillInForm::Lite version 1.03
+The document describes HTML::FillInForm::Lite version 1.04
 
 =head1 SYNOPSIS
 
@@ -40,7 +41,7 @@ The document describes HTML::FillInForm::Lite version 1.03
 =head1 DESCRIPTION
 
 このモジュールはHTMLのフォームにデータを充填します。
-これはC<HTML::FillInForm>を再実装したものです。
+これはC<HTML::FillInForm>をPure Perlで再実装したものです。
 
 C<HTML::FillInForm>はC<HTML::Parser>によって実装されていますが、
 このモジュールは正規表現ベースで実装されています。
@@ -130,14 +131,13 @@ C<fill()>の前にあらかじめC<new()>でインスタンスを作っておく
 としてもパフォーマンスは上がりません。
 
 I<sorce>としては，スカラーリファレンスか文字列の配列リファレンス，
-ファイル名を渡すことが出来ます。
+ファイル名，ファイルハンドルを渡すことが出来ます。
 
 I<form_data>としては，ハッシュリファレンスかC<param()>メソッドを持つ
-オブジェクト，アクセサを持つオブジェクト，前述のいずれかからなる
+オブジェクト，アクセサを持つ任意のオブジェクト，前述のいずれかからなる
 配列リファレンスを渡すことが出来ます。
 
-I<form_data>が手続きに基づくもの（つまりハッシュリファレンス以外のケース）では，
-その手続きはリストコンテキストで呼ばれます。したがって，フィールドに手を付けたくない場合，C<undef>ではなく空リストC<()>を返さなければいけません。
+I<form_data>がオブジェクトであれば，そのメソッドはリストコンテキストで呼ばれます。したがって，フィールドに手を付けたくない場合，C<undef>ではなく空リストC<()>を返さなければいけません。
 
 =head1 DEPENDENCIES
 
@@ -213,7 +213,7 @@ Goro Fuji (藤 吾郎) E<lt>gfuji(at)cpan.orgE<gt>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2008 Goro Fuji, Some rights reserved.
+Copyright (c) 2008-2009 Goro Fuji, Some rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
