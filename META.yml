@@ -24,4 +24,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/gfx/Perl-HTML-FillInForm-Lite.git
-version: 1.06
+version: 1.07
