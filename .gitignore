@@ -1,4 +1,5 @@
-META.yml
+META.*
+MYMETA.*
 Makefile
 blib/*
 inc/*
@@ -10,3 +11,4 @@ pm_to_blib
 cover_db/*
 nytprof*
 *.out
+.xslate_cache
