@@ -4,7 +4,7 @@ use 5.006_000; # 5.6.0
 use strict;
 use warnings;
 
-our $VERSION  = '1.10';
+our $VERSION  = '1.11';
 
 use Exporter ();
 our @ISA       = qw(Exporter);
@@ -33,8 +33,8 @@ my $value    = q{[vV][aA][lL][uU][eE]};
 
 my $SPACE        =  q{\s};
 my $ATTR_NAME    =  q{[\w\-]+};
-my $ATTR_VALUE   =  q{(?: " [^"]* " | ' [^']* ' | [^'"/>\s]+ )};
-my $ATTR         = qq{(?:$SPACE+ $ATTR_NAME = $ATTR_VALUE )};
+my $ATTR_VALUE   =  q{(?:" [^"]* " | ' [^']* ' | [^'"/>\s]+ | [\w\-]+ )};
+my $ATTR         = qq{(?: $SPACE+ (?: $ATTR_NAME (?: = $ATTR_VALUE )? ) )};
 
 my $FORM         = qq{(?: <$form     $ATTR+ $SPACE*  > )}; # <form>
 my $INPUT        = qq{(?: <$input    $ATTR+ $SPACE*/?> )}; # <input>
@@ -47,9 +47,15 @@ my $END_SELECT   = qq{(?: </$select>   )};
 my $END_OPTION   = qq{(?: </$option>   )};
 my $END_TEXTAREA = qq{(?: </$textarea> )};
 
-my $CHECKED      = qq{(?: $checked  = (?: "$checked " | '$checked'  | $checked  ) )};
-my $SELECTED     = qq{(?: $selected = (?: "$selected" | '$selected' | $selected ) )};
-my $MULTIPLE     = qq{(?: $multiple = (?: "$multiple" | '$multiple' | $multiple ) )};
+my $CHECKED      = qq{(?:
+    $checked  (?: = (?: "$checked " | '$checked'  | $checked  ) )?
+)};
+my $SELECTED     = qq{(?:
+    $selected (?: = (?: "$selected" | '$selected' | $selected ) )?
+)};
+my $MULTIPLE     = qq{(?:
+    $multiple (?: = (?: "$multiple" | '$multiple' | $multiple ) )?
+)};
 
 #my $DISABLED = q{(?: disabled = (?: "disabled" | 'disabled' | disabled ) )};
 
@@ -649,7 +655,7 @@ HTML::FillInForm::Lite - Lightweight FillInForm module in Pure Perl
 
 =head1 VERSION
 
-The document describes HTML::FillInForm::Lite version 1.10
+The document describes HTML::FillInForm::Lite version 1.11
 
 =head1 SYNOPSIS
 

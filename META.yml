@@ -25,4 +25,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/gfx/p5-HTML-FillInForm-Lite.git
-version: 1.10
+version: 1.11
