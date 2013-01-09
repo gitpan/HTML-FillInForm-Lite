@@ -3,6 +3,7 @@ abstract: 'Lightweight FillInForm module in Pure Perl'
 author:
   - 'Goro Fuji (藤 吾郎) <gfuji(at)cpan.org>'
 build_requires:
+  CGI: 0
   ExtUtils::MakeMaker: 6.59
   Test::More: 0.62
 configure_requires:
@@ -25,4 +26,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/gfx/p5-HTML-FillInForm-Lite.git
-version: 1.11
+version: 1.12
