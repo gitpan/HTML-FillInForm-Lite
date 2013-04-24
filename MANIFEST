@@ -1,6 +1,9 @@
-.gitignore
-.shipit
+Build.PL
 Changes
+LICENSE
+META.json
+README.md
+cpanfile
 example/benchmark-with-tt.pl
 example/benchmark-with-xslate.pl
 example/benchmark.pl
@@ -12,20 +15,9 @@ example/html/test_part_lite.html
 example/synopsis.pl
 example/testform1.tmpl
 example/testform2.tmpl
-inc/Module/Install.pm
-inc/Module/Install/Base.pm
-inc/Module/Install/Makefile.pm
-inc/Module/Install/MakeMaker.pm
-inc/Module/Install/Metadata.pm
-inc/Module/Install/Repository.pm
 lib/HTML/FillInForm/Lite.pm
 lib/HTML/FillInForm/Lite/Compat.pm
 lib/HTML/FillInForm/Lite/JA.pod
-Makefile.PL
-MANIFEST			This list of files
-MANIFEST.SKIP
-META.yml
-README
 t/00basic.t
 t/01input.t
 t/02select.t
@@ -47,3 +39,5 @@ t/99pod.t
 t/99podcoverage.t
 t/test.html
 t/test_sjis.html
+META.yml
+MANIFEST

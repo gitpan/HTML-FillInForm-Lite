@@ -7,10 +7,11 @@ build_requires:
   ExtUtils::MakeMaker: 6.59
   Test::More: 0.62
 configure_requires:
-  ExtUtils::MakeMaker: 6.59
-distribution_type: module
-dynamic_config: 1
-generated_by: 'Module::Install version 1.06'
+  CPAN::Meta: 0
+  CPAN::Meta::Prereqs: 0
+  Module::Build: 0.38
+dynamic_config: 0
+generated_by: 'Minilla/v0.0.56, CPAN::Meta::Converter version 2.130880'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -18,12 +19,29 @@ meta-spec:
 name: HTML-FillInForm-Lite
 no_index:
   directory:
-    - example
-    - inc
     - t
+    - xt
+    - inc
+    - share
+    - eg
+    - examples
+    - author
+provides:
+  HTML::FillInForm::Lite:
+    file: lib/HTML/FillInForm/Lite.pm
+    version: 1.13
+  HTML::FillInForm::Lite::Compat:
+    file: lib/HTML/FillInForm/Lite/Compat.pm
+    version: 1.13
 requires:
-  perl: 5.6.0
+  perl: 5.008001
 resources:
-  license: http://dev.perl.org/licenses/
+  bugtracker: https://github.com/gfx/p5-HTML-FillInForm-Lite/issues
+  homepage: https://github.com/gfx/p5-HTML-FillInForm-Lite
   repository: git://github.com/gfx/p5-HTML-FillInForm-Lite.git
-version: 1.12
+version: 1.13
+x_contributors:
+  - 'Fuji, Goro <gfuji@cpan.org>'
+  - 'Fuji, Goro <fuji.goro@dena.jp>'
+  - 'tokuhirom <tokuhirom@gmail.com>'
+  - 'Fuji, Goro <g.psy.va@gmail.com>'
